@@ -1,66 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { parse, differenceInMinutes, format } from "date-fns";
 
 export default function JournalPage() {
   const navigate = useNavigate();
 
   // List of strategies for the dropdown
-  const strategies = [
-    "ORB",
-    "Power Trend",
-    "Breakout",
-    "Phantom Flow",
-    "Pip Snatcher",
-  ];
+  const strategies = ["ORB", "Power Trend", "Breakout", "Phantom Flow", "Pip Snatcher"];
 
   const [trades, setTrades] = useState([]);
-  const [newTrade, setNewTrade] = useState({
-    pair: "",
-    strategy: "",
-    entryDate: "",
-    entryTime: "",
-    entryPrice: "",
-    stopLoss: "",
-    target: "",
-    closeDate: "",
-    closeTime: "",
-    closePrice: "",
-    notes: "",
-    screenshot: "",
-  });
+  const [newTrade, setNewTrade] = useState(createEmptyTrade());
+  const [editingId, setEditingId] = useState(null);
 
-  // Calculate Win/Loss/BE and percent P/L
-  const determineResult = (entry, stop, target, close) => {
-    const e = parseFloat(entry);
-    const s = parseFloat(stop);
-    const t = parseFloat(target);
-    const c = parseFloat(close);
-    if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) {
-      return { result: "", plPct: "" };
-    }
-
-    let result = "BE";
-    if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
-    else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
-
-    const plPct = ((c - e) / e * 100).toFixed(2) + "%";
-    return { result, plPct };
-  };
-
-  const addTrade = () => {
-    const { result, plPct } = determineResult(
-      newTrade.entryPrice,
-      newTrade.stopLoss,
-      newTrade.target,
-      newTrade.closePrice
-    );
-
-    setTrades((prev) => [
-      ...prev,
-      { ...newTrade, result, plPct, id: Date.now() },
-    ]);
-
-    setNewTrade({
+  // Helper to initialize/clear the form
+  function createEmptyTrade() {
+    return {
       pair: "",
       strategy: "",
       entryDate: "",
@@ -73,9 +27,98 @@ export default function JournalPage() {
       closePrice: "",
       notes: "",
       screenshot: "",
-    });
+    };
+  }
+
+  // Compute Result and R:R ratio
+  const determineResult = (entry, stop, target, close) => {
+    const e = parseFloat(entry);
+    const s = parseFloat(stop);
+    const t = parseFloat(target);
+    const c = parseFloat(close);
+    if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) {
+      return { result: "", rr: "" };
+    }
+
+    // R:R = |(target - entry)| / |(entry - stop)|  → always positive
+    const risk = Math.abs(e - s);
+    const reward = Math.abs(t - e);
+    const rr = risk !== 0 ? (reward / risk).toFixed(2) : "";
+
+    // Determine Win/Loss/BE
+    let result = "BE";
+    if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
+    else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
+
+    return { result, rr };
   };
 
+  // Computes “Xh Ym” between entryDate+entryTime and closeDate+closeTime
+  const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
+    if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
+    try {
+      const open = parse(
+        `${entryDate} ${entryTime}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      const close = parse(
+        `${closeDate} ${closeTime}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      const mins = differenceInMinutes(close, open);
+      if (isNaN(mins) || mins < 0) return "";
+      const hours = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      return `${hours}h ${remMins}m`;
+    } catch {
+      return "";
+    }
+  };
+
+  // Called when clicking “Add Trade” or “Save Edit”
+  const saveTrade = () => {
+    const { result, rr } = determineResult(
+      newTrade.entryPrice,
+      newTrade.stopLoss,
+      newTrade.target,
+      newTrade.closePrice
+    );
+
+    if (editingId !== null) {
+      // Update existing trade
+      setTrades((prev) =>
+        prev.map((t) =>
+          t.id === editingId ? { ...newTrade, result, rr, id: editingId } : t
+        )
+      );
+    } else {
+      // Add brand new
+      setTrades((prev) => [
+        ...prev,
+        { ...newTrade, result, rr, id: Date.now() },
+      ]);
+    }
+
+    // Clear form and exit editing mode
+    setNewTrade(createEmptyTrade());
+    setEditingId(null);
+  };
+
+  // Called when user clicks “Edit” on a trade
+  const startEditing = (trade) => {
+    setNewTrade({ ...trade });
+    setEditingId(trade.id);
+  };
+
+  // Called when user clicks “Cancel” while editing
+  const cancelEditing = () => {
+    setNewTrade(createEmptyTrade());
+    setEditingId(null);
+  };
+
+  // Shared styling for all inputs/selects
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -84,6 +127,19 @@ export default function JournalPage() {
     padding: "8px",
     width: "100%",
     boxSizing: "border-box",
+    fontSize: "14px",
+  };
+
+  // “Add Trade” / “Save Edit” button style
+  const buttonStyle = {
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "10px 16px",
+    cursor: "pointer",
+    fontSize: "14px",
+    marginRight: editingId !== null ? "12px" : "0",
   };
 
   return (
@@ -106,12 +162,13 @@ export default function JournalPage() {
           border: "none",
           borderRadius: "4px",
           cursor: "pointer",
+          fontSize: "14px",
         }}
       >
         Go to Performance
       </button>
 
-      {/* 4-column grid of inputs */}
+      {/* 4-column input grid */}
       <div
         style={{
           display: "grid",
@@ -120,6 +177,7 @@ export default function JournalPage() {
           marginBottom: "24px",
         }}
       >
+        {/* Column 1 */}
         <input
           placeholder="Pair"
           value={newTrade.pair}
@@ -127,6 +185,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Column 2: Strategy dropdown */}
         <select
           value={newTrade.strategy}
           onChange={(e) =>
@@ -154,6 +213,7 @@ export default function JournalPage() {
           ))}
         </select>
 
+        {/* Column 3 */}
         <input
           type="date"
           value={newTrade.entryDate}
@@ -163,6 +223,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Column 4 */}
         <input
           type="time"
           value={newTrade.entryTime}
@@ -172,6 +233,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Next row: Entry Price */}
         <input
           type="number"
           placeholder="Entry Price"
@@ -182,6 +244,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Stop Loss */}
         <input
           type="number"
           placeholder="Stop Loss"
@@ -192,6 +255,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Target */}
         <input
           placeholder="Target"
           value={newTrade.target}
@@ -201,6 +265,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Close Price */}
         <input
           type="number"
           placeholder="Close Price"
@@ -211,6 +276,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Next row: Close Date */}
         <input
           type="date"
           value={newTrade.closeDate}
@@ -220,6 +286,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Close Time */}
         <input
           type="time"
           value={newTrade.closeTime}
@@ -229,6 +296,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Notes */}
         <input
           placeholder="Notes"
           value={newTrade.notes}
@@ -236,6 +304,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
+        {/* Screenshot URL */}
         <input
           placeholder="Screenshot URL"
           value={newTrade.screenshot}
@@ -246,30 +315,45 @@ export default function JournalPage() {
         />
       </div>
 
-      <button
-        onClick={addTrade}
-        style={{
-          backgroundColor: "#3b82f6",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          padding: "10px 16px",
-          cursor: "pointer",
-          marginBottom: "32px",
-        }}
-      >
-        Add Trade
-      </button>
+      {/* Add / Save / Cancel buttons */}
+      <div style={{ marginBottom: "32px" }}>
+        <button onClick={saveTrade} style={buttonStyle}>
+          {editingId !== null ? "Save Changes" : "Add Trade"}
+        </button>
+        {editingId !== null && (
+          <button
+            onClick={cancelEditing}
+            style={{
+              backgroundColor: "#6b7280",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              padding: "10px 16px",
+              cursor: "pointer",
+              fontSize: "14px",
+            }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
 
-      {/* List of added trades */}
+      {/* Display the trades in a 4-column grid */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
-          const { result, plPct } = determineResult(
+          const { result, rr } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
             trade.target,
             trade.closePrice
           );
+          const duration = calculateDuration(
+            trade.entryDate,
+            trade.entryTime,
+            trade.closeDate,
+            trade.closeTime
+          );
+
           const resultColor =
             result === "Win"
               ? "#34d399"
@@ -291,18 +375,41 @@ export default function JournalPage() {
                 fontSize: "14px",
               }}
             >
+              {/* Col 1 */}
               <div>
                 <strong>Pair:</strong> {trade.pair}
-              </div>
-              <div>
-                <strong>Strategy:</strong> {trade.strategy}
               </div>
               <div>
                 <strong>Entry:</strong> {trade.entryPrice}
               </div>
               <div>
+                <strong>Result:</strong>{" "}
+                <span style={{ color: resultColor }}>{result}</span>
+              </div>
+              <div>
+                <strong>Entry D/T:</strong>{" "}
+                {trade.entryDate && format(parse(trade.entryDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}{" "}
+                {trade.entryTime}
+              </div>
+
+              {/* Col 2 */}
+              <div>
+                <strong>Strategy:</strong> {trade.strategy}
+              </div>
+              <div>
                 <strong>Stop:</strong> {trade.stopLoss}
               </div>
+              <div>
+                <strong>R:R:</strong>{" "}
+                <span style={{ color: resultColor }}>{rr}</span>
+              </div>
+              <div>
+                <strong>Close D/T:</strong>{" "}
+                {trade.closeDate && format(parse(trade.closeDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}{" "}
+                {trade.closeTime}
+              </div>
+
+              {/* Col 3 */}
               <div>
                 <strong>Target:</strong> {trade.target}
               </div>
@@ -310,22 +417,13 @@ export default function JournalPage() {
                 <strong>Close:</strong> {trade.closePrice}
               </div>
               <div>
-                <strong>Result:</strong>{" "}
-                <span style={{ color: resultColor }}>{result}</span>
-              </div>
-              <div>
-                <strong>P/L %:</strong>{" "}
-                <span style={{ color: resultColor }}>{plPct}</span>
-              </div>
-              <div>
-                <strong>Entry D/T:</strong> {trade.entryDate} {trade.entryTime}
-              </div>
-              <div>
-                <strong>Close D/T:</strong> {trade.closeDate} {trade.closeTime}
+                <strong>Duration:</strong> {duration}
               </div>
               <div>
                 <strong>Notes:</strong> {trade.notes}
               </div>
+
+              {/* Col 4 */}
               <div>
                 {trade.screenshot && (
                   <a
@@ -337,6 +435,22 @@ export default function JournalPage() {
                     View Screenshot
                   </a>
                 )}
+              </div>
+              <div>
+                <button
+                  onClick={() => startEditing(trade)}
+                  style={{
+                    backgroundColor: "#fbbf24",
+                    color: "#0b1120",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  Edit
+                </button>
               </div>
             </div>
           );
