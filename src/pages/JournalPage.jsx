@@ -2,71 +2,80 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function JournalPage() {
+  const navigate = useNavigate();
+
+  // List of strategies for the dropdown
+  const strategies = [
+    "ORB",
+    "Power Trend",
+    "Breakout",
+    "Phantom Flow",
+    "Pip Snatcher",
+  ];
+
   const [trades, setTrades] = useState([]);
   const [newTrade, setNewTrade] = useState({
     pair: "",
     strategy: "",
+    entryDate: "",
+    entryTime: "",
     entryPrice: "",
     stopLoss: "",
     target: "",
-    closePrice: "",
-    entryDate: "",
-    entryTime: "",
     closeDate: "",
     closeTime: "",
+    closePrice: "",
     notes: "",
     screenshot: "",
   });
-  const navigate = useNavigate();
 
-  // Calculate Result & R:R automatically
+  // Calculate Win/Loss/BE and percent P/L
   const determineResult = (entry, stop, target, close) => {
     const e = parseFloat(entry);
     const s = parseFloat(stop);
     const t = parseFloat(target);
     const c = parseFloat(close);
     if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) {
-      return { result: "", rr: "" };
+      return { result: "", plPct: "" };
     }
-    const risk = Math.abs(e - s);
-    const reward = Math.abs(t - e);
-    const rr = risk !== 0 ? (Math.abs(c - e) / risk).toFixed(2) : "";
+
     let result = "BE";
     if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
     else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
-    return { result, rr };
+
+    const plPct = ((c - e) / e * 100).toFixed(2) + "%";
+    return { result, plPct };
   };
 
-  // When user clicks “Add Trade”
   const addTrade = () => {
-    const { result, rr } = determineResult(
+    const { result, plPct } = determineResult(
       newTrade.entryPrice,
       newTrade.stopLoss,
       newTrade.target,
       newTrade.closePrice
     );
+
     setTrades((prev) => [
       ...prev,
-      { ...newTrade, result, rr, id: Date.now() },
+      { ...newTrade, result, plPct, id: Date.now() },
     ]);
-    // Reset form
+
     setNewTrade({
       pair: "",
       strategy: "",
+      entryDate: "",
+      entryTime: "",
       entryPrice: "",
       stopLoss: "",
       target: "",
-      closePrice: "",
-      entryDate: "",
-      entryTime: "",
       closeDate: "",
       closeTime: "",
+      closePrice: "",
       notes: "",
       screenshot: "",
     });
   };
 
-  // Shared input styling
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -117,14 +126,34 @@ export default function JournalPage() {
           onChange={(e) => setNewTrade((p) => ({ ...p, pair: e.target.value }))}
           style={inputStyle}
         />
-        <input
-          placeholder="Strategy"
+
+        <select
           value={newTrade.strategy}
           onChange={(e) =>
             setNewTrade((p) => ({ ...p, strategy: e.target.value }))
           }
-          style={inputStyle}
-        />
+          style={{
+            ...inputStyle,
+            appearance: "none",
+            WebkitAppearance: "none",
+            MozAppearance: "none",
+            color: newTrade.strategy ? "#e5e7eb" : "#64748b",
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath fill='%23e5e7eb' d='M0 3l5 5 5-5z'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 8px center",
+          }}
+        >
+          <option value="" disabled>
+            Select Strategy
+          </option>
+          {strategies.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+
         <input
           type="date"
           value={newTrade.entryDate}
@@ -133,6 +162,7 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           type="time"
           value={newTrade.entryTime}
@@ -151,6 +181,7 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           type="number"
           placeholder="Stop Loss"
@@ -160,6 +191,7 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           placeholder="Target"
           value={newTrade.target}
@@ -168,6 +200,7 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           type="number"
           placeholder="Close Price"
@@ -186,6 +219,7 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           type="time"
           value={newTrade.closeTime}
@@ -194,12 +228,14 @@ export default function JournalPage() {
           }
           style={inputStyle}
         />
+
         <input
           placeholder="Notes"
           value={newTrade.notes}
           onChange={(e) => setNewTrade((p) => ({ ...p, notes: e.target.value }))}
           style={inputStyle}
         />
+
         <input
           placeholder="Screenshot URL"
           value={newTrade.screenshot}
@@ -228,7 +264,7 @@ export default function JournalPage() {
       {/* List of added trades */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
-          const { result, rr } = determineResult(
+          const { result, plPct } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
             trade.target,
@@ -240,12 +276,6 @@ export default function JournalPage() {
               : result === "Loss"
               ? "#ef4444"
               : "#fbbf24";
-          const rrColor =
-            parseFloat(rr) > 1
-              ? "#34d399"
-              : parseFloat(rr) === 1
-              ? "#fbbf24"
-              : "#ef4444";
 
           return (
             <div
@@ -284,8 +314,8 @@ export default function JournalPage() {
                 <span style={{ color: resultColor }}>{result}</span>
               </div>
               <div>
-                <strong>R:R:</strong>{" "}
-                <span style={{ color: rrColor }}>{rr}</span>
+                <strong>P/L %:</strong>{" "}
+                <span style={{ color: resultColor }}>{plPct}</span>
               </div>
               <div>
                 <strong>Entry D/T:</strong> {trade.entryDate} {trade.entryTime}
