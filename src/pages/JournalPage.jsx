@@ -5,10 +5,10 @@ import { parse, differenceInMinutes, format } from "date-fns";
 export default function JournalPage() {
   const navigate = useNavigate();
 
-  // List of strategies for the dropdown
+  // Strategies dropdown
   const strategies = ["ORB", "Power Trend", "Breakout", "Phantom Flow", "Pip Snatcher"];
 
-  // Factory for creating an “empty” trade object
+  // Factory for a blank trade
   function createEmptyTrade() {
     return {
       id: null,
@@ -23,7 +23,8 @@ export default function JournalPage() {
       closeTime: "",
       closePrice: "",
       notes: "",
-      screenshot: "",        // your “setup trade” picture URL
+      setupScreenshot: "",   // URL of the setup screenshot
+      screenshot: "",        // URL of the result screenshot
       tradingViewLink: "",
     };
   }
@@ -32,7 +33,7 @@ export default function JournalPage() {
   const [newTrade, setNewTrade] = useState(createEmptyTrade());
   const [editingId, setEditingId] = useState(null);
 
-  // Figure out Win/Loss/BE + raw R/R ratio (number)
+  // Determine Win / Loss / BE and raw R/R ratio
   const determineResult = (entry, stop, target, close) => {
     const e = parseFloat(entry),
       s = parseFloat(stop),
@@ -52,7 +53,7 @@ export default function JournalPage() {
     return { result, rr: rrValue.toFixed(2) };
   };
 
-  // Calculate “Xh Ym” duration
+  // Calculate duration “Xh Ym”
   const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
     if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
     try {
@@ -68,7 +69,7 @@ export default function JournalPage() {
     }
   };
 
-  // Called when user clicks “Add Trade” or “Save Changes”
+  // Save a new or edited trade
   const saveTrade = () => {
     const { result, rr } = determineResult(
       newTrade.entryPrice,
@@ -78,38 +79,37 @@ export default function JournalPage() {
     );
 
     if (editingId !== null) {
-      // Update existing trade
+      // Update existing
       setTrades((prev) =>
         prev.map((t) =>
           t.id === editingId ? { ...newTrade, result, rr, id: editingId } : t
         )
       );
     } else {
-      // Add brand-new trade
+      // Add new
       setTrades((prev) => [
         ...prev,
         { ...newTrade, result, rr, id: Date.now() },
       ]);
     }
 
-    // Reset form
     setNewTrade(createEmptyTrade());
     setEditingId(null);
   };
 
-  // Populate form for “Edit”
+  // Begin editing a trade
   const startEditing = (trade) => {
     setNewTrade({ ...trade });
     setEditingId(trade.id);
   };
 
-  // Cancel “Edit” and clear form
+  // Cancel edit
   const cancelEditing = () => {
     setNewTrade(createEmptyTrade());
     setEditingId(null);
   };
 
-  // Shared input styling
+  // Input styling
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -121,7 +121,7 @@ export default function JournalPage() {
     fontSize: "14px",
   };
 
-  // Primary button style
+  // Button styling
   const buttonStyle = {
     backgroundColor: "#3b82f6",
     color: "white",
@@ -142,9 +142,7 @@ export default function JournalPage() {
         padding: "24px",
       }}
     >
-      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>
-        Trading Journal
-      </h1>
+      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>Trading Journal</h1>
 
       <button
         onClick={() => navigate("/performance")}
@@ -162,7 +160,7 @@ export default function JournalPage() {
         Go to Performance
       </button>
 
-      {/* ─── 4-column grid of inputs ─── */}
+      {/* ─── 4-Column Input Grid ─── */}
       <div
         style={{
           display: "grid",
@@ -295,7 +293,35 @@ export default function JournalPage() {
         />
 
         <input
-          placeholder="Screenshot URL"
+          placeholder="TradingView Setup Link"
+          value={newTrade.tradingViewLink}
+          onChange={(e) =>
+            setNewTrade((p) => ({ ...p, tradingViewLink: e.target.value }))
+          }
+          style={inputStyle}
+        />
+      </div>
+
+      {/* ─── Two URL fields side‐by‐side: Setup vs Result Screenshot ─── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "12px",
+          marginBottom: "24px",
+        }}
+      >
+        <input
+          placeholder="Setup Screenshot URL"
+          value={newTrade.setupScreenshot}
+          onChange={(e) =>
+            setNewTrade((p) => ({ ...p, setupScreenshot: e.target.value }))
+          }
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Result Screenshot URL"
           value={newTrade.screenshot}
           onChange={(e) =>
             setNewTrade((p) => ({ ...p, screenshot: e.target.value }))
@@ -304,17 +330,7 @@ export default function JournalPage() {
         />
       </div>
 
-      {/* ─── TradingView Setup Link (full-width) ─── */}
-      <input
-        placeholder="TradingView Setup Link"
-        value={newTrade.tradingViewLink}
-        onChange={(e) =>
-          setNewTrade((p) => ({ ...p, tradingViewLink: e.target.value }))
-        }
-        style={{ ...inputStyle, marginBottom: "24px" }}
-      />
-
-      {/* ─── “Add Trade” / “Save Changes” & “Cancel” buttons ─── */}
+      {/* ─── Add/Save & Cancel Buttons ─── */}
       <div style={{ marginBottom: "32px" }}>
         <button onClick={saveTrade} style={buttonStyle}>
           {editingId !== null ? "Save Changes" : "Add Trade"}
@@ -337,10 +353,9 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* ─── Displaying saved trades ─── */}
+      {/* ─── Display Logged Trades (4-column grid) ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
-          // Recompute result & rr
           const { result, rr } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
@@ -354,7 +369,7 @@ export default function JournalPage() {
             trade.closeTime
           );
 
-          // Convert R/R ratio (e.g. 1.25) → percentage string with sign
+          // Convert rr ratio to signed %
           let rrPctDisplay = "";
           if (rr !== "" && !isNaN(parseFloat(rr))) {
             const pct = (parseFloat(rr) * 100).toFixed(0);
@@ -363,7 +378,6 @@ export default function JournalPage() {
             else rrPctDisplay = "0%";
           }
 
-          // Color code result text
           const resultColor =
             result === "Win"
               ? "#34d399"
@@ -379,7 +393,7 @@ export default function JournalPage() {
                 padding: "16px",
                 borderRadius: "6px",
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                gridTemplateColumns: "repeat(4, 1fr)",
                 gap: "12px",
                 color: "#e5e7eb",
                 fontSize: "14px",
@@ -443,7 +457,7 @@ export default function JournalPage() {
                 <strong>Notes:</strong> {trade.notes || "—"}
               </div>
 
-              {/* Column 4: Screenshot thumbnail, TV link & Edit */}
+              {/* Column 4: Setup & Result Thumbnails, Link & Edit */}
               <div
                 style={{
                   display: "flex",
@@ -451,21 +465,53 @@ export default function JournalPage() {
                   gap: "8px",
                 }}
               >
-                {trade.screenshot ? (
-                  <img
-                    src={trade.screenshot}
-                    alt="screenshot thumbnail"
-                    style={{
-                      maxWidth: "100px",
-                      maxHeight: "60px",
-                      borderRadius: "4px",
-                      objectFit: "cover",
-                      border: "1px solid #334155",
-                    }}
-                  />
-                ) : (
-                  <div style={{ color: "#64748b" }}>No Image</div>
-                )}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {trade.setupScreenshot ? (
+                    <img
+                      src={trade.setupScreenshot}
+                      alt="Setup Thumbnail"
+                      style={{
+                        width: "80px",
+                        height: "50px",
+                        objectFit: "cover",
+                        borderRadius: "4px",
+                        border: "1px solid #334155",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "80px",
+                        height: "50px",
+                        backgroundColor: "#334155",
+                        borderRadius: "4px",
+                      }}
+                    />
+                  )}
+
+                  {trade.screenshot ? (
+                    <img
+                      src={trade.screenshot}
+                      alt="Result Thumbnail"
+                      style={{
+                        width: "80px",
+                        height: "50px",
+                        objectFit: "cover",
+                        borderRadius: "4px",
+                        border: "1px solid #334155",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "80px",
+                        height: "50px",
+                        backgroundColor: "#334155",
+                        borderRadius: "4px",
+                      }}
+                    />
+                  )}
+                </div>
 
                 {trade.tradingViewLink ? (
                   <a
