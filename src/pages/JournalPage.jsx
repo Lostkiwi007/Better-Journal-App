@@ -1,531 +1,568 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { parse, differenceInMinutes, format } from "date-fns";
+import {
+  format,
+  parse,
+  differenceInMinutes,
+} from "date-fns";
 
 export default function JournalPage() {
+  const [trades, setTrades] = useState([]);
+  const [newTrade, setNewTrade] = useState({
+    pair: "",
+    strategy: "",
+    entry: "",
+    stop: "",
+    target: "",
+    close: "",
+    entryDate: null,
+    entryTime: "",
+    closeDate: null,
+    closeTime: "",
+    notes: "",
+    setupScreenshot: "",
+    resultScreenshot: "",
+  });
   const navigate = useNavigate();
 
-  const strategies = [
-    "ORB",
-    "Power Trend",
-    "Breakout",
-    "Phantom Flow",
-    "Pip Snatcher",
-  ];
+  const determineResult = (entry, stop, target, close) => {
+    const e = parseFloat(entry);
+    const s = parseFloat(stop);
+    const t = parseFloat(target);
+    const c = parseFloat(close);
+    if ([e, s, t, c].some((v) => isNaN(v))) {
+      return { result: "", rr: "" };
+    }
+    const risk = Math.abs(e - s);
+    const reward = Math.abs(t - e);
+    // if close reached stop or target, compute actual profit/loss
+    const pnl = c - e;
+    // sign: win or loss
+    const result =
+      (e < t && c >= t) || (e > t && c <= t)
+        ? "Win"
+        : (e < s && c <= s) || (e > s && c >= s)
+        ? "Loss"
+        : "BE";
+    // compute R:R ratio as units of risk, with sign
+    const r = risk !== 0 ? pnl / risk : 0;
+    // e.g. +1.25 or -0.50
+    const rr = r.toFixed(2);
+    return { result, rr };
+  };
 
-  function createEmptyTrade() {
-    return {
-      id: null,
+  const calculateDuration = (ed, et, cd, ct) => {
+    if (!ed || !cd || !et || !ct) return "";
+    // ed, cd are Date objects; et, ct are "HH:mm a" strings
+    const open = parse(
+      `${format(ed, "yyyy-MM-dd")} ${et}`,
+      "yyyy-MM-dd hh:mm a",
+      new Date()
+    );
+    const close = parse(
+      `${format(cd, "yyyy-MM-dd")} ${ct}`,
+      "yyyy-MM-dd hh:mm a",
+      new Date()
+    );
+    const mins = differenceInMinutes(close, open);
+    if (isNaN(mins) || mins < 0) return "";
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
+  const addTrade = () => {
+    const { result, rr } = determineResult(
+      newTrade.entry,
+      newTrade.stop,
+      newTrade.target,
+      newTrade.close
+    );
+    setTrades([
+      ...trades,
+      {
+        ...newTrade,
+        result,
+        rr,
+      },
+    ]);
+    setNewTrade({
       pair: "",
       strategy: "",
-      entryDate: "",
-      entryTime: "",
-      entryPrice: "",
-      stopLoss: "",
+      entry: "",
+      stop: "",
       target: "",
-      closeDate: "",
+      close: "",
+      entryDate: null,
+      entryTime: "",
+      closeDate: null,
       closeTime: "",
-      closePrice: "",
       notes: "",
       setupScreenshot: "",
       resultScreenshot: "",
-    };
-  }
-
-  const [trades, setTrades] = useState([]);
-  const [newTrade, setNewTrade] = useState(createEmptyTrade());
-  const [editingId, setEditingId] = useState(null);
-
-  // Compute result (Win/Loss/BE) and R/R ratio as decimal
-  const determineResult = (entryStr, stopStr, targetStr, closeStr) => {
-    const e = parseFloat(entryStr);
-    const s = parseFloat(stopStr);
-    const t = parseFloat(targetStr);
-    const c = parseFloat(closeStr);
-
-    if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c) || e === s) {
-      return { result: "", rrRatio: "" };
-    }
-
-    const risk = Math.abs(e - s);
-    const profit = c - e;
-    const rawRatio = profit / risk;
-    const ratio = isFinite(rawRatio) ? rawRatio.toFixed(2) : "";
-
-    let result = "BE";
-    if (profit > 0) result = "Win";
-    else if (profit < 0) result = "Loss";
-
-    return { result, rrRatio: ratio };
-  };
-
-  // Compute duration in “Xh Ym”
-  const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
-    if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
-    try {
-      const openDT = parse(
-        `${entryDate} ${entryTime}`,
-        "yyyy-MM-dd HH:mm",
-        new Date()
-      );
-      const closeDT = parse(
-        `${closeDate} ${closeTime}`,
-        "yyyy-MM-dd HH:mm",
-        new Date()
-      );
-      const mins = differenceInMinutes(closeDT, openDT);
-      if (isNaN(mins) || mins < 0) return "";
-      const hours = Math.floor(mins / 60);
-      const remMins = mins % 60;
-      return `${hours}h ${remMins}m`;
-    } catch {
-      return "";
-    }
-  };
-
-  // Add or Update trade
-  const saveTrade = () => {
-    const { result, rrRatio } = determineResult(
-      newTrade.entryPrice,
-      newTrade.stopLoss,
-      newTrade.target,
-      newTrade.closePrice
-    );
-
-    if (editingId !== null) {
-      // Update existing
-      setTrades((prev) =>
-        prev.map((t) =>
-          t.id === editingId
-            ? { ...newTrade, result, rrRatio, id: editingId }
-            : t
-        )
-      );
-    } else {
-      // Add new
-      setTrades((prev) => [
-        ...prev,
-        { ...newTrade, result, rrRatio, id: Date.now() },
-      ]);
-    }
-
-    setNewTrade(createEmptyTrade());
-    setEditingId(null);
-  };
-
-  const startEditing = (trade) => {
-    setNewTrade({ ...trade });
-    setEditingId(trade.id);
-  };
-
-  const cancelEditing = () => {
-    setNewTrade(createEmptyTrade());
-    setEditingId(null);
-  };
-
-  const inputStyle = {
-    backgroundColor: "#1e293b",
-    color: "#e5e7eb",
-    border: "1px solid #334155",
-    borderRadius: "4px",
-    padding: "8px",
-    width: "100%",
-    boxSizing: "border-box",
-    fontSize: "14px",
-  };
-
-  const buttonStyle = {
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    padding: "10px 16px",
-    cursor: "pointer",
-    fontSize: "14px",
-    marginRight: editingId !== null ? "12px" : "0",
+    });
   };
 
   return (
     <div
       style={{
-        backgroundColor: "#0b1120",
-        color: "#e5e7eb",
+        backgroundColor: "#0f172a",
+        color: "white",
         minHeight: "100vh",
-        padding: "24px",
+        padding: 24,
       }}
     >
-      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>
-        Trading Journal
-      </h1>
-
+      <h1 style={{ color: "#ec4899" }}>Trading Journal</h1>
       <button
         onClick={() => navigate("/performance")}
         style={{
-          marginBottom: "24px",
+          marginBottom: 20,
           padding: "8px 12px",
-          backgroundColor: "#3b82f6",
+          backgroundColor: "#60a5fa",
           color: "white",
           border: "none",
-          borderRadius: "4px",
+          borderRadius: 4,
           cursor: "pointer",
-          fontSize: "14px",
         }}
       >
         Go to Performance
       </button>
 
-      {/* 4-column grid of inputs (TRADINGVIEW LINK REMOVED) */}
+      {/* ───── INPUT FORM: FOUR COLUMNS ───── */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: "12px",
-          marginBottom: "12px",
+          marginBottom: 20,
         }}
       >
+        {/* Row 1 */}
         <input
           placeholder="Pair"
           value={newTrade.pair}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, pair: e.target.value }))
+            setNewTrade({ ...newTrade, pair: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
-
         <select
           value={newTrade.strategy}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, strategy: e.target.value }))
+            setNewTrade({ ...newTrade, strategy: e.target.value })
           }
           style={{
-            ...inputStyle,
-            appearance: "none",
-            WebkitAppearance: "none",
-            MozAppearance: "none",
-            color: newTrade.strategy ? "#e5e7eb" : "#64748b",
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath fill='%23e5e7eb' d='M0 3l5 5 5-5z'/%3E%3C/svg%3E\")",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 8px center",
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
           }}
         >
-          <option value="" disabled>
-            Select Strategy
-          </option>
-          {strategies.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
+          <option value="">Select Strategy</option>
+          <option value="ORB">ORB</option>
+          <option value="Power Trend">Power Trend</option>
+          <option value="Breakout">Breakout</option>
+          <option value="Phantom Flow">Phantom Flow</option>
+          <option value="Pip Snatcher">Pip Snatcher</option>
         </select>
-
-        <input
-          type="date"
-          value={newTrade.entryDate}
-          onChange={(e) =>
-            setNewTrade((p) => ({ ...p, entryDate: e.target.value }))
-          }
-          style={inputStyle}
-        />
-
+        <div style={{ display: "flex", gap: "6px" }}>
+          <input
+            type="date"
+            value={
+              newTrade.entryDate
+                ? format(newTrade.entryDate, "yyyy-MM-dd")
+                : ""
+            }
+            onChange={(e) =>
+              setNewTrade({
+                ...newTrade,
+                entryDate: e.target.value
+                  ? new Date(e.target.value)
+                  : null,
+              })
+            }
+            style={{
+              padding: 8,
+              backgroundColor: "#1f2937",
+              color: "white",
+              border: "1px solid #374151",
+              borderRadius: 4,
+              width: "100%",
+            }}
+          />
+        </div>
         <input
           type="time"
           value={newTrade.entryTime}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, entryTime: e.target.value }))
+            setNewTrade({ ...newTrade, entryTime: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
 
+        {/* Row 2 */}
         <input
-          type="number"
           placeholder="Entry Price"
-          value={newTrade.entryPrice}
-          onChange={(e) =>
-            setNewTrade((p) => ({ ...p, entryPrice: e.target.value }))
-          }
-          style={inputStyle}
-        />
-
-        <input
           type="number"
-          placeholder="Stop Loss"
-          value={newTrade.stopLoss}
+          value={newTrade.entry}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, stopLoss: e.target.value }))
+            setNewTrade({ ...newTrade, entry: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
-
+        <input
+          placeholder="Stop Loss"
+          type="number"
+          value={newTrade.stop}
+          onChange={(e) =>
+            setNewTrade({ ...newTrade, stop: e.target.value })
+          }
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
+        />
         <input
           placeholder="Target"
+          type="number"
           value={newTrade.target}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, target: e.target.value }))
+            setNewTrade({ ...newTrade, target: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
-
         <input
-          type="number"
           placeholder="Close Price"
-          value={newTrade.closePrice}
+          type="number"
+          value={newTrade.close}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, closePrice: e.target.value }))
+            setNewTrade({ ...newTrade, close: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
 
-        <input
-          type="date"
-          value={newTrade.closeDate}
-          onChange={(e) =>
-            setNewTrade((p) => ({ ...p, closeDate: e.target.value }))
-          }
-          style={inputStyle}
-        />
-
+        {/* Row 3 */}
+        <div style={{ display: "flex", gap: "6px" }}>
+          <input
+            type="date"
+            value={
+              newTrade.closeDate
+                ? format(newTrade.closeDate, "yyyy-MM-dd")
+                : ""
+            }
+            onChange={(e) =>
+              setNewTrade({
+                ...newTrade,
+                closeDate: e.target.value
+                  ? new Date(e.target.value)
+                  : null,
+              })
+            }
+            style={{
+              padding: 8,
+              backgroundColor: "#1f2937",
+              color: "white",
+              border: "1px solid #374151",
+              borderRadius: 4,
+              width: "100%",
+            }}
+          />
+        </div>
         <input
           type="time"
           value={newTrade.closeTime}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, closeTime: e.target.value }))
+            setNewTrade({ ...newTrade, closeTime: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
-
         <input
           placeholder="Notes"
           value={newTrade.notes}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, notes: e.target.value }))
+            setNewTrade({ ...newTrade, notes: e.target.value })
           }
-          style={inputStyle}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
-
-        {/* fourth column’s slot is now intentionally left blank */}
-        <div />
-      </div>
-
-      {/* Setup & Result Screenshot URLs (full width) */}
-      <div style={{ marginBottom: "24px" }}>
         <input
           placeholder="Setup Screenshot URL"
           value={newTrade.setupScreenshot}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, setupScreenshot: e.target.value }))
+            setNewTrade({
+              ...newTrade,
+              setupScreenshot: e.target.value,
+            })
           }
-          style={{ ...inputStyle, marginBottom: "12px" }}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
+
+        {/* Row 4 (only one field) */}
         <input
           placeholder="Result Screenshot URL"
           value={newTrade.resultScreenshot}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, resultScreenshot: e.target.value }))
+            setNewTrade({
+              ...newTrade,
+              resultScreenshot: e.target.value,
+            })
           }
-          style={inputStyle}
+          style={{
+            gridColumn: "1 / span 4",
+            padding: 8,
+            backgroundColor: "#1f2937",
+            color: "white",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            width: "100%",
+          }}
         />
       </div>
 
-      {/* Add/Save & Cancel Buttons */}
-      <div style={{ marginBottom: "32px" }}>
-        <button onClick={saveTrade} style={buttonStyle}>
-          {editingId !== null ? "Save Changes" : "Add Trade"}
-        </button>
-        {editingId !== null && (
-          <button
-            onClick={cancelEditing}
-            style={{
-              backgroundColor: "#6b7280",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              padding: "10px 16px",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Cancel
-          </button>
-        )}
-      </div>
+      <button
+        onClick={addTrade}
+        style={{
+          backgroundColor: "#1d4ed8",
+          color: "white",
+          border: "none",
+          borderRadius: 4,
+          padding: "8px 12px",
+          cursor: "pointer",
+          marginBottom: 20,
+        }}
+      >
+        Add Trade
+      </button>
 
-      {/* Display Logged Trades */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {trades.map((trade) => {
-          const { result, rrRatio } = determineResult(
-            trade.entryPrice,
-            trade.stopLoss,
-            trade.target,
-            trade.closePrice
-          );
+      {/* ───── TRADE LIST ───── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {trades.map((trade, i) => {
           const duration = calculateDuration(
             trade.entryDate,
             trade.entryTime,
             trade.closeDate,
             trade.closeTime
           );
-
-          const resultColor =
-            result === "Win"
-              ? "#34d399"
-              : result === "Loss"
-              ? "#ef4444"
-              : "#fbbf24";
-
           return (
             <div
-              key={trade.id}
+              key={i}
               style={{
                 backgroundColor: "#1f2937",
-                padding: "16px",
-                borderRadius: "6px",
+                padding: 16,
+                borderRadius: 6,
                 display: "grid",
                 gridTemplateColumns: "repeat(4, 1fr)",
                 gap: "12px",
-                color: "#e5e7eb",
-                fontSize: "14px",
+                alignItems: "start",
               }}
             >
-              {/* Column 1 */}
-              <div>
-                <strong>Pair:</strong> {trade.pair || "—"}
-              </div>
-              <div>
-                <strong>Entry:</strong> {trade.entryPrice || "—"}
-              </div>
-              <div>
-                <strong>Result:</strong>{" "}
-                <span style={{ color: resultColor }}>{result || "—"}</span>
-              </div>
-              <div>
-                <strong>Entry D/T:</strong>{" "}
-                {trade.entryDate
-                  ? format(
-                      parse(trade.entryDate, "yyyy-MM-dd", new Date()),
-                      "dd/MM/yyyy"
-                    )
-                  : "—"}{" "}
-                {trade.entryTime || "—"}
-              </div>
-
-              {/* Column 2 */}
-              <div>
-                <strong>Strategy:</strong> {trade.strategy || "—"}
-              </div>
-              <div>
-                <strong>Stop:</strong> {trade.stopLoss || "—"}
-              </div>
-              <div>
-                <strong>R/R:</strong>{" "}
-                <span style={{ color: resultColor }}>
-                  {rrRatio !== "" ? `${rrRatio} R:R` : "—"}
-                </span>
-              </div>
-              <div>
-                <strong>Close D/T:</strong>{" "}
-                {trade.closeDate
-                  ? format(
-                      parse(trade.closeDate, "yyyy-MM-dd", new Date()),
-                      "dd/MM/yyyy"
-                    )
-                  : "—"}{" "}
-                {trade.closeTime || "—"}
-              </div>
-
-              {/* Column 3 */}
-              <div>
-                <strong>Target:</strong> {trade.target || "—"}
-              </div>
-              <div>
-                <strong>Close:</strong> {trade.closePrice || "—"}
-              </div>
-              <div>
-                <strong>Duration:</strong> {duration || "—"}
-              </div>
-              <div>
-                <strong>Notes:</strong> {trade.notes || "—"}
-              </div>
-
-              {/* Column 4 */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                }}
-              >
-                {/* Setup Thumbnail */}
-                {trade.setupScreenshot ? (
-                  <a
-                    href={trade.setupScreenshot}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+              {/* Col 1: Pair / Strategy / Target */}
+              <div style={{ color: "white" }}>
+                <div>
+                  <strong>Pair:</strong> {trade.pair || "—"}
+                </div>
+                <div>
+                  <strong>Strategy:</strong> {trade.strategy || "—"}
+                </div>
+                <div>
+                  <strong>Target:</strong> {trade.target || "—"}
+                </div>
+                {trade.setupScreenshot && (
+                  <div style={{ marginTop: 8 }}>
                     <img
                       src={trade.setupScreenshot}
-                      alt="Setup Thumbnail"
+                      alt="setup thumbnail"
                       style={{
-                        width: "80px",
-                        height: "50px",
+                        width: 80,
+                        height: 50,
                         objectFit: "cover",
-                        borderRadius: "4px",
-                        border: "1px solid #334155",
+                        border: "1px solid #374151",
+                        borderRadius: 4,
                       }}
                     />
-                  </a>
-                ) : (
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "50px",
-                      backgroundColor: "#334155",
-                      borderRadius: "4px",
-                    }}
-                  />
+                    <div>
+                      <a
+                        href={trade.setupScreenshot}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#60a5fa",
+                          textDecoration: "underline",
+                          fontSize: "13px",
+                        }}
+                      >
+                        View Setup
+                      </a>
+                    </div>
+                  </div>
                 )}
+              </div>
 
-                {/* Result Thumbnail */}
-                {trade.resultScreenshot ? (
-                  <a
-                    href={trade.resultScreenshot}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+              {/* Col 2: Entry / Stop / Close */}
+              <div style={{ color: "white" }}>
+                <div>
+                  <strong>Entry:</strong> {trade.entry || "—"}
+                </div>
+                <div>
+                  <strong>Stop:</strong> {trade.stop || "—"}
+                </div>
+                <div>
+                  <strong>Close:</strong> {trade.close || "—"}
+                </div>
+                {trade.resultScreenshot && (
+                  <div style={{ marginTop: 8 }}>
                     <img
                       src={trade.resultScreenshot}
-                      alt="Result Thumbnail"
+                      alt="result thumbnail"
                       style={{
-                        width: "80px",
-                        height: "50px",
+                        width: 80,
+                        height: 50,
                         objectFit: "cover",
-                        borderRadius: "4px",
-                        border: "1px solid #334155",
+                        border: "1px solid #374151",
+                        borderRadius: 4,
                       }}
                     />
-                  </a>
-                ) : (
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "50px",
-                      backgroundColor: "#334155",
-                      borderRadius: "4px",
-                    }}
-                  />
+                    <div>
+                      <a
+                        href={trade.resultScreenshot}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#60a5fa",
+                          textDecoration: "underline",
+                          fontSize: "13px",
+                        }}
+                      >
+                        View Result
+                      </a>
+                    </div>
+                  </div>
                 )}
+              </div>
 
+              {/* Col 3: Result / R:R / Duration */}
+              <div style={{ color: "white" }}>
+                <div>
+                  <strong>Result:</strong>{" "}
+                  <span
+                    style={{
+                      color:
+                        trade.result === "Win"
+                          ? "#34d399"
+                          : trade.result === "Loss"
+                          ? "#f87171"
+                          : "#ffffff",
+                    }}
+                  >
+                    {trade.result || "—"}
+                  </span>
+                </div>
+                <div>
+                  <strong>R:R:</strong>{" "}
+                  {trade.rr
+                    ? `${trade.rr.startsWith("-") ? "" : "+"}${trade.rr} R:R`
+                    : "—"}
+                </div>
+                <div>
+                  <strong>Duration:</strong> {duration || "—"}
+                </div>
+              </div>
+
+              {/* Col 4: Entry D/T / Close D/T / Notes */}
+              <div style={{ color: "white" }}>
+                <div>
+                  <strong>Entry D/T:</strong>{" "}
+                  {trade.entryDate
+                    ? `${format(trade.entryDate, "MM/dd/yyyy")} ${trade.entryTime}`
+                    : "—"}
+                </div>
+                <div>
+                  <strong>Close D/T:</strong>{" "}
+                  {trade.closeDate
+                    ? `${format(trade.closeDate, "MM/dd/yyyy")} ${trade.closeTime}`
+                    : "—"}
+                </div>
+                <div>
+                  <strong>Notes:</strong> {trade.notes || "—"}
+                </div>
                 <button
-                  onClick={() => startEditing(trade)}
                   style={{
+                    marginTop: 8,
                     backgroundColor: "#fbbf24",
                     color: "#0b1120",
                     border: "none",
-                    borderRadius: "4px",
+                    borderRadius: 4,
                     padding: "6px 10px",
                     cursor: "pointer",
                     fontSize: "13px",
                     alignSelf: "flex-start",
+                  }}
+                  onClick={() => {
+                    // For now, “Edit” just populates back into the form.
+                    setNewTrade({ ...trade });
+                    // remove old trade before re-adding on “Add Trade”
+                    setTrades(trades.filter((_, idx2) => idx2 !== i));
                   }}
                 >
                   Edit
