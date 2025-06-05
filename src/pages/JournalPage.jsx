@@ -5,10 +5,8 @@ import { TradesContext } from "../context/TradesContext";
 
 export default function JournalPage() {
   const navigate = useNavigate();
-  // ← pull trades + setTrades from context instead of local state
   const { trades, setTrades } = useContext(TradesContext);
 
-  // local form state for one new/editing trade
   const [newTrade, setNewTrade] = useState({
     pair: "",
     strategy: "",
@@ -25,38 +23,34 @@ export default function JournalPage() {
     resultScreenshot: "",
   });
 
-  // Compute Win/Loss/BE + R:R ratio (decimal)
   const determineResult = (entry, stop, target, close) => {
     const e = parseFloat(entry);
     const s = parseFloat(stop);
     const t = parseFloat(target);
     const c = parseFloat(close);
-    if ([e, s, t, c].some((v) => isNaN(v) || v === null)) {
+    if ([e, s, t, c].some((v) => isNaN(v))) {
       return { result: "", rr: "" };
     }
     const risk = Math.abs(e - s);
     const profit = c - e;
     const rawRatio = profit / risk;
-    const ratio = isFinite(rawRatio) ? rawRatio.toFixed(2) : "";
-
+    const rr = isFinite(rawRatio) ? rawRatio.toFixed(2) : "";
     let result = "BE";
     if (profit > 0) result = "Win";
     else if (profit < 0) result = "Loss";
-
-    return { result, rr: ratio };
+    return { result, rr };
   };
 
-  // Compute “Xh Ym” between two date-time combos
-  const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
-    if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
+  const calculateDuration = (ed, et, cd, ct) => {
+    if (!ed || !et || !cd || !ct) return "";
     try {
       const openDT = parse(
-        `${format(entryDate, "yyyy-MM-dd")} ${entryTime}`,
+        `${format(ed, "yyyy-MM-dd")} ${et}`,
         "yyyy-MM-dd HH:mm",
         new Date()
       );
       const closeDT = parse(
-        `${format(closeDate, "yyyy-MM-dd")} ${closeTime}`,
+        `${format(cd, "yyyy-MM-dd")} ${ct}`,
         "yyyy-MM-dd HH:mm",
         new Date()
       );
@@ -70,7 +64,6 @@ export default function JournalPage() {
     }
   };
 
-  // When user clicks “Add Trade”
   const addTrade = () => {
     const { result, rr } = determineResult(
       newTrade.entryPrice,
@@ -78,19 +71,10 @@ export default function JournalPage() {
       newTrade.target,
       newTrade.closePrice
     );
-
-    // Append to context’s trades array
     setTrades([
       ...trades,
-      {
-        ...newTrade,
-        result,
-        rr,
-        id: Date.now(),
-      },
+      { ...newTrade, result, rr, id: Date.now() },
     ]);
-
-    // Reset form
     setNewTrade({
       pair: "",
       strategy: "",
@@ -158,7 +142,6 @@ export default function JournalPage() {
         Go to Performance
       </button>
 
-      {/* ─── 4-column input grid ─── */}
       <div
         style={{
           display: "grid",
@@ -226,7 +209,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Row 2 */}
         <input
           placeholder="Entry Price"
           type="number"
@@ -264,7 +246,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Row 3 */}
         <input
           type="date"
           value={
@@ -308,7 +289,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Row 4 */}
         <input
           placeholder="Result Screenshot URL"
           value={newTrade.resultScreenshot}
@@ -334,17 +314,21 @@ export default function JournalPage() {
         Add Trade
       </button>
 
-      {/* ─── Display all trades from context ─── */}
-      <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: "16px" }}>
-        {trades.map((trade, idx) => {
+      <div
+        style={{
+          marginTop: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        {trades.map((trade, i) => {
           const duration = calculateDuration(
             trade.entryDate,
             trade.entryTime,
             trade.closeDate,
             trade.closeTime
           );
-
-          // Color‐code R:R text
           const rrColor =
             trade.result === "Win"
               ? "#34d399"
@@ -354,7 +338,7 @@ export default function JournalPage() {
 
           return (
             <div
-              key={idx}
+              key={i}
               style={{
                 backgroundColor: "#1f2937",
                 padding: "16px",
@@ -366,7 +350,6 @@ export default function JournalPage() {
                 fontSize: "14px",
               }}
             >
-              {/* Column 1 */}
               <div>
                 <strong>Pair:</strong> {trade.pair || "—"}
               </div>
@@ -384,7 +367,6 @@ export default function JournalPage() {
                   : "—"}
               </div>
 
-              {/* Column 2 */}
               <div>
                 <strong>Strategy:</strong> {trade.strategy || "—"}
               </div>
@@ -404,7 +386,6 @@ export default function JournalPage() {
                   : "—"}
               </div>
 
-              {/* Column 3 */}
               <div>
                 <strong>Target:</strong> {trade.target || "—"}
               </div>
@@ -418,11 +399,15 @@ export default function JournalPage() {
                 <strong>Notes:</strong> {trade.notes || "—"}
               </div>
 
-              {/* Column 4 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {/* Setup Thumbnail */}
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
                 {trade.setupScreenshot ? (
-                  <a href={trade.setupScreenshot} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={trade.setupScreenshot}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <img
                       src={trade.setupScreenshot}
                       alt="Setup thumbnail"
@@ -446,9 +431,12 @@ export default function JournalPage() {
                   />
                 )}
 
-                {/* Result Thumbnail */}
                 {trade.resultScreenshot ? (
-                  <a href={trade.resultScreenshot} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={trade.resultScreenshot}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <img
                       src={trade.resultScreenshot}
                       alt="Result thumbnail"
@@ -472,11 +460,10 @@ export default function JournalPage() {
                   />
                 )}
 
-                {/* Edit button just re-loads data into form for now */}
                 <button
                   onClick={() => {
                     setNewTrade({ ...trade });
-                    setTrades(trades.filter((_, i2) => i2 !== idx));
+                    setTrades(trades.filter((_, idx2) => idx2 !== i));
                   }}
                   style={{
                     backgroundColor: "#fbbf24",
