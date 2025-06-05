@@ -5,10 +5,8 @@ import { parse, differenceInMinutes, format } from "date-fns";
 export default function JournalPage() {
   const navigate = useNavigate();
 
-  // Strategies dropdown
   const strategies = ["ORB", "Power Trend", "Breakout", "Phantom Flow", "Pip Snatcher"];
 
-  // Factory for a blank trade
   function createEmptyTrade() {
     return {
       id: null,
@@ -23,8 +21,7 @@ export default function JournalPage() {
       closeTime: "",
       closePrice: "",
       notes: "",
-      setupScreenshot: "",   // URL of the setup screenshot
-      screenshot: "",        // URL of the result screenshot
+      screenshot: "",
       tradingViewLink: "",
     };
   }
@@ -33,27 +30,39 @@ export default function JournalPage() {
   const [newTrade, setNewTrade] = useState(createEmptyTrade());
   const [editingId, setEditingId] = useState(null);
 
-  // Determine Win / Loss / BE and raw R/R ratio
-  const determineResult = (entry, stop, target, close) => {
-    const e = parseFloat(entry),
-      s = parseFloat(stop),
-      t = parseFloat(target),
-      c = parseFloat(close);
-    if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) {
-      return { result: "", rr: "" };
+  // Calculate profit/loss % relative to risk
+  const determineResult = (entry, stop, close) => {
+    const e = parseFloat(entry);
+    const s = parseFloat(stop);
+    const c = parseFloat(close);
+    if (isNaN(e) || isNaN(s) || isNaN(c)) {
+      return { result: "", rrPct: "" };
     }
 
-    let result = "BE";
-    if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
-    else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
-
+    // Profit = close - entry
+    const profit = c - e;
+    // Risk = | entry - stop |
     const risk = Math.abs(e - s);
-    const reward = Math.abs(t - e);
-    const rrValue = risk !== 0 ? reward / risk : 0;
-    return { result, rr: rrValue.toFixed(2) };
+    if (risk === 0) {
+      return { result: "", rrPct: "" };
+    }
+
+    // R/R ratio
+    const rrRatio = profit / risk;
+    // Convert to percentage (e.g. 0.5 → 50)
+    const rawPct = (rrRatio * 100).toFixed(0);
+
+    let result = "BE";
+    if (profit > 0) result = "Win";
+    else if (profit < 0) result = "Loss";
+
+    const sign = profit > 0 ? "+" : profit < 0 ? "−" : "";
+    const rrPct = profit === 0 ? "0%" : `${sign}${Math.abs(rawPct)}%`;
+
+    return { result, rrPct };
   };
 
-  // Calculate duration “Xh Ym”
+  // Compute duration string “Xh Ym”
   const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
     if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
     try {
@@ -69,12 +78,11 @@ export default function JournalPage() {
     }
   };
 
-  // Save a new or edited trade
+  // Add or update a trade
   const saveTrade = () => {
-    const { result, rr } = determineResult(
+    const { result, rrPct } = determineResult(
       newTrade.entryPrice,
       newTrade.stopLoss,
-      newTrade.target,
       newTrade.closePrice
     );
 
@@ -82,14 +90,14 @@ export default function JournalPage() {
       // Update existing
       setTrades((prev) =>
         prev.map((t) =>
-          t.id === editingId ? { ...newTrade, result, rr, id: editingId } : t
+          t.id === editingId ? { ...newTrade, result, rrPct, id: editingId } : t
         )
       );
     } else {
       // Add new
       setTrades((prev) => [
         ...prev,
-        { ...newTrade, result, rr, id: Date.now() },
+        { ...newTrade, result, rrPct, id: Date.now() },
       ]);
     }
 
@@ -97,7 +105,7 @@ export default function JournalPage() {
     setEditingId(null);
   };
 
-  // Begin editing a trade
+  // Pre-fill form for editing
   const startEditing = (trade) => {
     setNewTrade({ ...trade });
     setEditingId(trade.id);
@@ -109,7 +117,7 @@ export default function JournalPage() {
     setEditingId(null);
   };
 
-  // Input styling
+  // Common input style
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -121,7 +129,7 @@ export default function JournalPage() {
     fontSize: "14px",
   };
 
-  // Button styling
+  // Button style
   const buttonStyle = {
     backgroundColor: "#3b82f6",
     color: "white",
@@ -302,26 +310,10 @@ export default function JournalPage() {
         />
       </div>
 
-      {/* ─── Two URL fields side‐by‐side: Setup vs Result Screenshot ─── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "12px",
-          marginBottom: "24px",
-        }}
-      >
+      {/* ─── Single “Screenshot URL” (full width) ─── */}
+      <div style={{ marginBottom: "24px" }}>
         <input
-          placeholder="Setup Screenshot URL"
-          value={newTrade.setupScreenshot}
-          onChange={(e) =>
-            setNewTrade((p) => ({ ...p, setupScreenshot: e.target.value }))
-          }
-          style={inputStyle}
-        />
-
-        <input
-          placeholder="Result Screenshot URL"
+          placeholder="Screenshot URL"
           value={newTrade.screenshot}
           onChange={(e) =>
             setNewTrade((p) => ({ ...p, screenshot: e.target.value }))
@@ -353,13 +345,12 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* ─── Display Logged Trades (4-column grid) ─── */}
+      {/* ─── Display Logged Trades ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
-          const { result, rr } = determineResult(
+          const { result, rrPct } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
-            trade.target,
             trade.closePrice
           );
           const duration = calculateDuration(
@@ -368,15 +359,6 @@ export default function JournalPage() {
             trade.closeDate,
             trade.closeTime
           );
-
-          // Convert rr ratio to signed %
-          let rrPctDisplay = "";
-          if (rr !== "" && !isNaN(parseFloat(rr))) {
-            const pct = (parseFloat(rr) * 100).toFixed(0);
-            if (result === "Win") rrPctDisplay = `+${pct}%`;
-            else if (result === "Loss") rrPctDisplay = `-${pct}%`;
-            else rrPctDisplay = "0%";
-          }
 
           const resultColor =
             result === "Win"
@@ -430,7 +412,7 @@ export default function JournalPage() {
               </div>
               <div>
                 <strong>R/R %:</strong>{" "}
-                <span style={{ color: resultColor }}>{rrPctDisplay}</span>
+                <span style={{ color: resultColor }}>{rrPct}</span>
               </div>
               <div>
                 <strong>Close D/T:</strong>{" "}
@@ -457,7 +439,7 @@ export default function JournalPage() {
                 <strong>Notes:</strong> {trade.notes || "—"}
               </div>
 
-              {/* Column 4: Setup & Result Thumbnails, Link & Edit */}
+              {/* Column 4 */}
               <div
                 style={{
                   display: "flex",
@@ -465,34 +447,12 @@ export default function JournalPage() {
                   gap: "8px",
                 }}
               >
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {trade.setupScreenshot ? (
-                    <img
-                      src={trade.setupScreenshot}
-                      alt="Setup Thumbnail"
-                      style={{
-                        width: "80px",
-                        height: "50px",
-                        objectFit: "cover",
-                        borderRadius: "4px",
-                        border: "1px solid #334155",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "80px",
-                        height: "50px",
-                        backgroundColor: "#334155",
-                        borderRadius: "4px",
-                      }}
-                    />
-                  )}
-
-                  {trade.screenshot ? (
+                {/* If there’s a screenshot URL, show a small clickable thumbnail */}
+                {trade.screenshot ? (
+                  <a href={trade.screenshot} target="_blank" rel="noopener noreferrer">
                     <img
                       src={trade.screenshot}
-                      alt="Result Thumbnail"
+                      alt="Screenshot Thumbnail"
                       style={{
                         width: "80px",
                         height: "50px",
@@ -501,18 +461,19 @@ export default function JournalPage() {
                         border: "1px solid #334155",
                       }}
                     />
-                  ) : (
-                    <div
-                      style={{
-                        width: "80px",
-                        height: "50px",
-                        backgroundColor: "#334155",
-                        borderRadius: "4px",
-                      }}
-                    />
-                  )}
-                </div>
+                  </a>
+                ) : (
+                  <div
+                    style={{
+                      width: "80px",
+                      height: "50px",
+                      backgroundColor: "#334155",
+                      borderRadius: "4px",
+                    }}
+                  />
+                )}
 
+                {/* TradingView link (if provided) */}
                 {trade.tradingViewLink ? (
                   <a
                     href={trade.tradingViewLink}
