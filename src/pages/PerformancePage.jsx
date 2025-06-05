@@ -1,155 +1,193 @@
-import React, { useContext } from "react";
-import { Link } from "react-router-dom";
+// File: src/pages/PerformancePage.jsx
+import React, { useContext, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
 
 export default function PerformancePage() {
-  // Pull the shared trades array from context
+  const navigate = useNavigate();
   const { trades } = useContext(TradesContext);
 
-  // Compute stats
-  const totalTrades = trades.length;
-  const wins = trades.filter((t) => t.result === "Win").length;
-  const losses = trades.filter((t) => t.result === "Loss").length;
-  const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
-  const avgRR =
-    totalTrades > 0
-      ? (
-          trades.reduce((acc, t) => acc + parseFloat(t.rr || 0), 0) /
-          totalTrades
-        ).toFixed(2)
-      : 0;
-  const bestTradeRR =
-    trades.length > 0
-      ? Math.max(...trades.map((t) => parseFloat(t.rr || "-Infinity")))
-      : 0;
-  const worstTradeRR =
-    trades.length > 0
-      ? Math.min(...trades.map((t) => parseFloat(t.rr || "Infinity")))
-      : 0;
+  const stats = useMemo(() => {
+    const total = trades.length;
+    const wins = trades.filter((t) => t.result.toLowerCase() === "win").length;
+    const losses = trades.filter((t) => t.result.toLowerCase() === "loss").length;
+    const breakevens = trades.filter((t) => t.result.toLowerCase() === "be").length;
+    const avgRR =
+      total > 0
+        ? (
+            trades.reduce((sum, t) => sum + (parseFloat(t.rr) || 0), 0) / total
+          ).toFixed(2)
+        : "0.00";
+    const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
+    return { total, wins, losses, breakevens, avgRR, winRate };
+  }, [trades]);
 
-  const cardStyle = {
-    backgroundColor: "#1f2937",
-    borderRadius: "8px",
-    padding: "16px",
-    color: "#e5e7eb",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
-    flex: "1 1 200px",
-    minWidth: "200px",
-  };
+  const pieData = useMemo(() => {
+    const { wins, losses, breakevens } = stats;
+    return [
+      { label: "Wins", value: wins },
+      { label: "Losses", value: losses },
+      { label: "Breakevens", value: breakevens },
+    ];
+  }, [stats]);
 
   return (
     <div
       style={{
-        backgroundColor: "#0b1120",
-        color: "#e5e7eb",
+        backgroundColor: "#0f172a",
+        color: "white",
         minHeight: "100vh",
-        padding: "24px",
+        padding: 24,
+        fontFamily: "sans-serif",
       }}
     >
-      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>
-        Performance Summary
-      </h1>
-
-      <Link
-        to="/"
+      <h1 style={{ color: "#34d399", marginBottom: 16 }}>Performance Summary</h1>
+      <button
+        onClick={() => navigate("/")}
         style={{
-          display: "inline-block",
-          marginBottom: "24px",
+          marginBottom: 24,
           padding: "8px 12px",
           backgroundColor: "#60a5fa",
           color: "white",
-          borderRadius: "4px",
-          textDecoration: "none",
-          fontSize: "14px",
+          border: "none",
+          borderRadius: 4,
+          cursor: "pointer",
         }}
       >
-        ◀ Back to Journal
-      </Link>
+        Back to Journal
+      </button>
 
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "16px",
-          marginBottom: "32px",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 24,
+          marginBottom: 40,
         }}
       >
-        {/* Total Trades */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#3b82f6", marginBottom: "8px" }}>
-            Total Trades
-          </h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{totalTrades}</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Total Trades</div>
+          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.total}</div>
         </div>
 
-        {/* Wins */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#34d399", marginBottom: "8px" }}>Wins</h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{wins}</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Wins</div>
+          <div style={{ fontSize: 28, color: "#34d399" }}>{stats.wins}</div>
         </div>
 
-        {/* Losses */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#ef4444", marginBottom: "8px" }}>Losses</h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{losses}</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Losses</div>
+          <div style={{ fontSize: 28, color: "#f87171" }}>{stats.losses}</div>
         </div>
 
-        {/* Win Rate */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#fbbf24", marginBottom: "8px" }}>Win Rate</h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{winRate}%</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Breakevens</div>
+          <div style={{ fontSize: 28, color: "#fbbf24" }}>{stats.breakevens}</div>
         </div>
 
-        {/* Average R:R */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#60a5fa", marginBottom: "8px" }}>Avg R:R</h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{avgRR}</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Win Rate</div>
+          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.winRate}%</div>
         </div>
 
-        {/* Best Trade */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#34d399", marginBottom: "8px" }}>
-            Best Trade
-          </h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{bestTradeRR.toFixed(2)}</p>
-        </div>
-
-        {/* Worst Trade */}
-        <div style={cardStyle}>
-          <h2 style={{ color: "#ef4444", marginBottom: "8px" }}>
-            Worst Trade
-          </h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{worstTradeRR.toFixed(2)}</p>
+        <div
+          style={{
+            backgroundColor: "#1f2937",
+            borderRadius: 6,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af" }}>Avg R:R</div>
+          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.avgRR}</div>
         </div>
       </div>
 
-      {/* Placeholder for an Equity Curve or future chart */}
-      <div
-        style={{
-          backgroundColor: "#1f2937",
-          borderRadius: "8px",
-          padding: "16px",
-          color: "#e5e7eb",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
-        }}
-      >
-        <h2 style={{ color: "#ec4899", marginBottom: "12px" }}>
-          Equity Curve (coming soon)
-        </h2>
-        <div
-          style={{
-            backgroundColor: "#111827",
-            height: "200px",
-            borderRadius: "4px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#6b7280",
-            fontSize: "1rem",
-          }}
-        >
-          Chart placeholder
-        </div>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        {pieData.map((slice) => (
+          <div
+            key={slice.label}
+            style={{
+              backgroundColor: "#1f2937",
+              borderRadius: 6,
+              padding: 16,
+              flex: "1 1 120px",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#9ca3af" }}>{slice.label}</div>
+            <div
+              style={{
+                fontSize: 24,
+                color:
+                  slice.label === "Wins"
+                    ? "#34d399"
+                    : slice.label === "Losses"
+                    ? "#f87171"
+                    : "#fbbf24",
+              }}
+            >
+              {slice.value}
+            </div>
+            <div
+              style={{
+                height: 8,
+                marginTop: 8,
+                backgroundColor: "#374151",
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.round((slice.value / stats.total) * 100)}%`,
+                  height: "100%",
+                  backgroundColor:
+                    slice.label === "Wins"
+                      ? "#34d399"
+                      : slice.label === "Losses"
+                      ? "#f87171"
+                      : "#fbbf24",
+                }}
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
