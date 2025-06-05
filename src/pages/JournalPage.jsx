@@ -30,39 +30,36 @@ export default function JournalPage() {
   const [newTrade, setNewTrade] = useState(createEmptyTrade());
   const [editingId, setEditingId] = useState(null);
 
-  // Calculate profit/loss % relative to risk
-  const determineResult = (entry, stop, close) => {
-    const e = parseFloat(entry);
-    const s = parseFloat(stop);
-    const c = parseFloat(close);
-    if (isNaN(e) || isNaN(s) || isNaN(c)) {
-      return { result: "", rrPct: "" };
+  // ─── Compute Win/Loss/BE and R/R (decimal) ───
+  const determineResult = (entryStr, stopStr, targetStr, closeStr) => {
+    const e = parseFloat(entryStr);
+    const s = parseFloat(stopStr);
+    const t = parseFloat(targetStr);
+    const c = parseFloat(closeStr);
+
+    // If any is NaN, return empty
+    if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c) || e === s) {
+      return { result: "", rrRatio: "" };
     }
 
-    // Profit = close - entry
-    const profit = c - e;
-    // Risk = | entry - stop |
+    // Risk = |entry - stop|
     const risk = Math.abs(e - s);
-    if (risk === 0) {
-      return { result: "", rrPct: "" };
-    }
+    // Profit (actual) = close - entry
+    const profit = c - e;
 
-    // R/R ratio
-    const rrRatio = profit / risk;
-    // Convert to percentage (e.g. 0.5 → 50)
-    const rawPct = (rrRatio * 100).toFixed(0);
+    // Compute R/R ratio (e.g. 1.00 means profit exactly == risk)
+    const rawRatio = profit / risk;
+    const ratio = isFinite(rawRatio) ? rawRatio.toFixed(2) : "";
 
+    // Decide Win/Loss/BE
     let result = "BE";
     if (profit > 0) result = "Win";
     else if (profit < 0) result = "Loss";
 
-    const sign = profit > 0 ? "+" : profit < 0 ? "−" : "";
-    const rrPct = profit === 0 ? "0%" : `${sign}${Math.abs(rawPct)}%`;
-
-    return { result, rrPct };
+    return { result, rrRatio: ratio };
   };
 
-  // Compute duration string “Xh Ym”
+  // ─── Compute Duration in “Xh Ym” ───
   const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
     if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
     try {
@@ -78,11 +75,12 @@ export default function JournalPage() {
     }
   };
 
-  // Add or update a trade
+  // ─── Add or Update a Trade ───
   const saveTrade = () => {
-    const { result, rrPct } = determineResult(
+    const { result, rrRatio } = determineResult(
       newTrade.entryPrice,
       newTrade.stopLoss,
+      newTrade.target,
       newTrade.closePrice
     );
 
@@ -90,14 +88,14 @@ export default function JournalPage() {
       // Update existing
       setTrades((prev) =>
         prev.map((t) =>
-          t.id === editingId ? { ...newTrade, result, rrPct, id: editingId } : t
+          t.id === editingId ? { ...newTrade, result, rrRatio, id: editingId } : t
         )
       );
     } else {
       // Add new
       setTrades((prev) => [
         ...prev,
-        { ...newTrade, result, rrPct, id: Date.now() },
+        { ...newTrade, result, rrRatio, id: Date.now() },
       ]);
     }
 
@@ -105,19 +103,18 @@ export default function JournalPage() {
     setEditingId(null);
   };
 
-  // Pre-fill form for editing
+  // ─── Prefill form for Editing ───
   const startEditing = (trade) => {
     setNewTrade({ ...trade });
     setEditingId(trade.id);
   };
 
-  // Cancel edit
   const cancelEditing = () => {
     setNewTrade(createEmptyTrade());
     setEditingId(null);
   };
 
-  // Common input style
+  // ─── Basic Styles ───
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -129,7 +126,6 @@ export default function JournalPage() {
     fontSize: "14px",
   };
 
-  // Button style
   const buttonStyle = {
     backgroundColor: "#3b82f6",
     color: "white",
@@ -310,7 +306,7 @@ export default function JournalPage() {
         />
       </div>
 
-      {/* ─── Single “Screenshot URL” (full width) ─── */}
+      {/* ─── Screenshot URL (full width) ─── */}
       <div style={{ marginBottom: "24px" }}>
         <input
           placeholder="Screenshot URL"
@@ -348,9 +344,10 @@ export default function JournalPage() {
       {/* ─── Display Logged Trades ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
-          const { result, rrPct } = determineResult(
+          const { result, rrRatio } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
+            trade.target,
             trade.closePrice
           );
           const duration = calculateDuration(
@@ -360,6 +357,7 @@ export default function JournalPage() {
             trade.closeTime
           );
 
+          // Color-code the R/R ratio
           const resultColor =
             result === "Win"
               ? "#34d399"
@@ -411,8 +409,10 @@ export default function JournalPage() {
                 <strong>Stop:</strong> {trade.stopLoss || "—"}
               </div>
               <div>
-                <strong>R/R %:</strong>{" "}
-                <span style={{ color: resultColor }}>{rrPct}</span>
+                <strong>R/R:</strong>{" "}
+                <span style={{ color: resultColor }}>
+                  {rrRatio !== "" ? `${rrRatio} R:R` : "—"}
+                </span>
               </div>
               <div>
                 <strong>Close D/T:</strong>{" "}
@@ -447,7 +447,7 @@ export default function JournalPage() {
                   gap: "8px",
                 }}
               >
-                {/* If there’s a screenshot URL, show a small clickable thumbnail */}
+                {/* Thumbnail: Screenshot */}
                 {trade.screenshot ? (
                   <a href={trade.screenshot} target="_blank" rel="noopener noreferrer">
                     <img
@@ -473,7 +473,7 @@ export default function JournalPage() {
                   />
                 )}
 
-                {/* TradingView link (if provided) */}
+                {/* TradingView setup link */}
                 {trade.tradingViewLink ? (
                   <a
                     href={trade.tradingViewLink}
