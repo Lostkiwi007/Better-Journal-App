@@ -1,16 +1,31 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Link } from "react-router-dom";
+import { TradesContext } from "../context/TradesContext";
 
 export default function PerformancePage() {
-  // For now, these are hard-coded placeholders.
-  // In the future you can pass real stats via props or context.
-  const totalTrades = 42;
-  const wins = 28;
-  const losses = 14;
-  const winRate = ((wins / totalTrades) * 100).toFixed(1); // e.g. "66.7"
-  const avgRR = 1.35; // e.g. 1.35 (R:R)
-  const bestTradeRR = 2.50;
-  const worstTradeRR = -0.75;
+  // Pull the shared trades array from context
+  const { trades } = useContext(TradesContext);
+
+  // Compute stats
+  const totalTrades = trades.length;
+  const wins = trades.filter((t) => t.result === "Win").length;
+  const losses = trades.filter((t) => t.result === "Loss").length;
+  const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
+  const avgRR =
+    totalTrades > 0
+      ? (
+          trades.reduce((acc, t) => acc + parseFloat(t.rr || 0), 0) /
+          totalTrades
+        ).toFixed(2)
+      : 0;
+  const bestTradeRR =
+    trades.length > 0
+      ? Math.max(...trades.map((t) => parseFloat(t.rr || "-Infinity")))
+      : 0;
+  const worstTradeRR =
+    trades.length > 0
+      ? Math.min(...trades.map((t) => parseFloat(t.rr || "Infinity")))
+      : 0;
 
   const cardStyle = {
     backgroundColor: "#1f2937",
@@ -87,10 +102,8 @@ export default function PerformancePage() {
 
         {/* Average R:R */}
         <div style={cardStyle}>
-          <h2 style={{ color: "#60a5fa", marginBottom: "8px" }}>
-            Avg R:R
-          </h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{avgRR.toFixed(2)}</p>
+          <h2 style={{ color: "#60a5fa", marginBottom: "8px" }}>Avg R:R</h2>
+          <p style={{ fontSize: "2rem", margin: 0 }}>{avgRR}</p>
         </div>
 
         {/* Best Trade */}
@@ -110,7 +123,7 @@ export default function PerformancePage() {
         </div>
       </div>
 
-      {/* Placeholder for future charts */}
+      {/* Placeholder for an Equity Curve or future chart */}
       <div
         style={{
           backgroundColor: "#1f2937",
