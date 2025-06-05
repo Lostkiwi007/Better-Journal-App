@@ -5,7 +5,13 @@ import { parse, differenceInMinutes, format } from "date-fns";
 export default function JournalPage() {
   const navigate = useNavigate();
 
-  const strategies = ["ORB", "Power Trend", "Breakout", "Phantom Flow", "Pip Snatcher"];
+  const strategies = [
+    "ORB",
+    "Power Trend",
+    "Breakout",
+    "Phantom Flow",
+    "Pip Snatcher",
+  ];
 
   function createEmptyTrade() {
     return {
@@ -21,8 +27,8 @@ export default function JournalPage() {
       closeTime: "",
       closePrice: "",
       notes: "",
-      screenshot: "",
-      tradingViewLink: "",
+      setupScreenshot: "",
+      resultScreenshot: "",
     };
   }
 
@@ -30,28 +36,22 @@ export default function JournalPage() {
   const [newTrade, setNewTrade] = useState(createEmptyTrade());
   const [editingId, setEditingId] = useState(null);
 
-  // ─── Compute Win/Loss/BE and R/R (decimal) ───
+  // Compute result (Win/Loss/BE) and R/R ratio as decimal
   const determineResult = (entryStr, stopStr, targetStr, closeStr) => {
     const e = parseFloat(entryStr);
     const s = parseFloat(stopStr);
     const t = parseFloat(targetStr);
     const c = parseFloat(closeStr);
 
-    // If any is NaN, return empty
     if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c) || e === s) {
       return { result: "", rrRatio: "" };
     }
 
-    // Risk = |entry - stop|
     const risk = Math.abs(e - s);
-    // Profit (actual) = close - entry
     const profit = c - e;
-
-    // Compute R/R ratio (e.g. 1.00 means profit exactly == risk)
     const rawRatio = profit / risk;
     const ratio = isFinite(rawRatio) ? rawRatio.toFixed(2) : "";
 
-    // Decide Win/Loss/BE
     let result = "BE";
     if (profit > 0) result = "Win";
     else if (profit < 0) result = "Loss";
@@ -59,12 +59,20 @@ export default function JournalPage() {
     return { result, rrRatio: ratio };
   };
 
-  // ─── Compute Duration in “Xh Ym” ───
+  // Compute duration in “Xh Ym”
   const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
     if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
     try {
-      const openDT = parse(`${entryDate} ${entryTime}`, "yyyy-MM-dd HH:mm", new Date());
-      const closeDT = parse(`${closeDate} ${closeTime}`, "yyyy-MM-dd HH:mm", new Date());
+      const openDT = parse(
+        `${entryDate} ${entryTime}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      const closeDT = parse(
+        `${closeDate} ${closeTime}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
       const mins = differenceInMinutes(closeDT, openDT);
       if (isNaN(mins) || mins < 0) return "";
       const hours = Math.floor(mins / 60);
@@ -75,7 +83,7 @@ export default function JournalPage() {
     }
   };
 
-  // ─── Add or Update a Trade ───
+  // Add or Update trade
   const saveTrade = () => {
     const { result, rrRatio } = determineResult(
       newTrade.entryPrice,
@@ -88,7 +96,9 @@ export default function JournalPage() {
       // Update existing
       setTrades((prev) =>
         prev.map((t) =>
-          t.id === editingId ? { ...newTrade, result, rrRatio, id: editingId } : t
+          t.id === editingId
+            ? { ...newTrade, result, rrRatio, id: editingId }
+            : t
         )
       );
     } else {
@@ -103,7 +113,6 @@ export default function JournalPage() {
     setEditingId(null);
   };
 
-  // ─── Prefill form for Editing ───
   const startEditing = (trade) => {
     setNewTrade({ ...trade });
     setEditingId(trade.id);
@@ -114,7 +123,6 @@ export default function JournalPage() {
     setEditingId(null);
   };
 
-  // ─── Basic Styles ───
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -146,7 +154,9 @@ export default function JournalPage() {
         padding: "24px",
       }}
     >
-      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>Trading Journal</h1>
+      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>
+        Trading Journal
+      </h1>
 
       <button
         onClick={() => navigate("/performance")}
@@ -164,7 +174,7 @@ export default function JournalPage() {
         Go to Performance
       </button>
 
-      {/* ─── 4-Column Input Grid ─── */}
+      {/* 4-column grid of inputs (TRADINGVIEW LINK REMOVED) */}
       <div
         style={{
           display: "grid",
@@ -173,7 +183,6 @@ export default function JournalPage() {
           marginBottom: "12px",
         }}
       >
-        {/* Row 1 */}
         <input
           placeholder="Pair"
           value={newTrade.pair}
@@ -228,7 +237,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Row 2 */}
         <input
           type="number"
           placeholder="Entry Price"
@@ -268,7 +276,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Row 3 */}
         <input
           type="date"
           value={newTrade.closeDate}
@@ -296,29 +303,31 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        <input
-          placeholder="TradingView Setup Link"
-          value={newTrade.tradingViewLink}
-          onChange={(e) =>
-            setNewTrade((p) => ({ ...p, tradingViewLink: e.target.value }))
-          }
-          style={inputStyle}
-        />
+        {/* fourth column’s slot is now intentionally left blank */}
+        <div />
       </div>
 
-      {/* ─── Screenshot URL (full width) ─── */}
+      {/* Setup & Result Screenshot URLs (full width) */}
       <div style={{ marginBottom: "24px" }}>
         <input
-          placeholder="Screenshot URL"
-          value={newTrade.screenshot}
+          placeholder="Setup Screenshot URL"
+          value={newTrade.setupScreenshot}
           onChange={(e) =>
-            setNewTrade((p) => ({ ...p, screenshot: e.target.value }))
+            setNewTrade((p) => ({ ...p, setupScreenshot: e.target.value }))
+          }
+          style={{ ...inputStyle, marginBottom: "12px" }}
+        />
+        <input
+          placeholder="Result Screenshot URL"
+          value={newTrade.resultScreenshot}
+          onChange={(e) =>
+            setNewTrade((p) => ({ ...p, resultScreenshot: e.target.value }))
           }
           style={inputStyle}
         />
       </div>
 
-      {/* ─── Add/Save & Cancel Buttons ─── */}
+      {/* Add/Save & Cancel Buttons */}
       <div style={{ marginBottom: "32px" }}>
         <button onClick={saveTrade} style={buttonStyle}>
           {editingId !== null ? "Save Changes" : "Add Trade"}
@@ -341,7 +350,7 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* ─── Display Logged Trades ─── */}
+      {/* Display Logged Trades */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
           const { result, rrRatio } = determineResult(
@@ -357,7 +366,6 @@ export default function JournalPage() {
             trade.closeTime
           );
 
-          // Color-code the R/R ratio
           const resultColor =
             result === "Win"
               ? "#34d399"
@@ -388,7 +396,7 @@ export default function JournalPage() {
               </div>
               <div>
                 <strong>Result:</strong>{" "}
-                <span style={{ color: resultColor }}>{result}</span>
+                <span style={{ color: resultColor }}>{result || "—"}</span>
               </div>
               <div>
                 <strong>Entry D/T:</strong>{" "}
@@ -447,12 +455,16 @@ export default function JournalPage() {
                   gap: "8px",
                 }}
               >
-                {/* Thumbnail: Screenshot */}
-                {trade.screenshot ? (
-                  <a href={trade.screenshot} target="_blank" rel="noopener noreferrer">
+                {/* Setup Thumbnail */}
+                {trade.setupScreenshot ? (
+                  <a
+                    href={trade.setupScreenshot}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <img
-                      src={trade.screenshot}
-                      alt="Screenshot Thumbnail"
+                      src={trade.setupScreenshot}
+                      alt="Setup Thumbnail"
                       style={{
                         width: "80px",
                         height: "50px",
@@ -473,24 +485,34 @@ export default function JournalPage() {
                   />
                 )}
 
-                {/* TradingView setup link */}
-                {trade.tradingViewLink ? (
+                {/* Result Thumbnail */}
+                {trade.resultScreenshot ? (
                   <a
-                    href={trade.tradingViewLink}
+                    href={trade.resultScreenshot}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      color: "#60a5fa",
-                      textDecoration: "underline",
-                      fontSize: "13px",
-                    }}
                   >
-                    View Setup
+                    <img
+                      src={trade.resultScreenshot}
+                      alt="Result Thumbnail"
+                      style={{
+                        width: "80px",
+                        height: "50px",
+                        objectFit: "cover",
+                        borderRadius: "4px",
+                        border: "1px solid #334155",
+                      }}
+                    />
                   </a>
                 ) : (
-                  <div style={{ color: "#64748b", fontSize: "13px" }}>
-                    No Setup Link
-                  </div>
+                  <div
+                    style={{
+                      width: "80px",
+                      height: "50px",
+                      backgroundColor: "#334155",
+                      borderRadius: "4px",
+                    }}
+                  />
                 )}
 
                 <button
