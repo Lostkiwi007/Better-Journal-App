@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { parse, differenceInMinutes, format } from "date-fns";
 
 export default function JournalPage() {
   const navigate = useNavigate();
 
-  // List of strategies for the dropdown
+  // 1) List of strategies
   const strategies = ["ORB", "Power Trend", "Breakout", "Phantom Flow", "Pip Snatcher"];
 
-  const [trades, setTrades] = useState([]);
-  const [newTrade, setNewTrade] = useState(createEmptyTrade());
-  const [editingId, setEditingId] = useState(null);
-
-  // Helper to initialize/clear the form
+  // 2) Initial “empty trade” factory
   function createEmptyTrade() {
     return {
+      id: null,
       pair: "",
       strategy: "",
       entryDate: "",
@@ -27,10 +24,15 @@ export default function JournalPage() {
       closePrice: "",
       notes: "",
       screenshot: "",
+      tradingViewLink: "",
     };
   }
 
-  // Compute Result and R:R ratio
+  const [trades, setTrades] = useState([]);
+  const [newTrade, setNewTrade] = useState(createEmptyTrade());
+  const [editingId, setEditingId] = useState(null);
+
+  // 3) Determine Win/Loss/BE and R/R ratio (as a number string)
   const determineResult = (entry, stop, target, close) => {
     const e = parseFloat(entry);
     const s = parseFloat(stop);
@@ -40,34 +42,23 @@ export default function JournalPage() {
       return { result: "", rr: "" };
     }
 
-    // R:R = |(target - entry)| / |(entry - stop)|  → always positive
-    const risk = Math.abs(e - s);
-    const reward = Math.abs(t - e);
-    const rr = risk !== 0 ? (reward / risk).toFixed(2) : "";
-
-    // Determine Win/Loss/BE
     let result = "BE";
     if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
     else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
 
-    return { result, rr };
+    const risk = Math.abs(e - s);
+    const reward = Math.abs(t - e);
+    const rrValue = risk !== 0 ? reward / risk : 0;
+    return { result, rr: rrValue.toFixed(2) };
   };
 
-  // Computes “Xh Ym” between entryDate+entryTime and closeDate+closeTime
+  // 4) Calculate “Xh Ym” between entryDate+entryTime and closeDate+closeTime
   const calculateDuration = (entryDate, entryTime, closeDate, closeTime) => {
     if (!entryDate || !entryTime || !closeDate || !closeTime) return "";
     try {
-      const open = parse(
-        `${entryDate} ${entryTime}`,
-        "yyyy-MM-dd HH:mm",
-        new Date()
-      );
-      const close = parse(
-        `${closeDate} ${closeTime}`,
-        "yyyy-MM-dd HH:mm",
-        new Date()
-      );
-      const mins = differenceInMinutes(close, open);
+      const openDT = parse(`${entryDate} ${entryTime}`, "yyyy-MM-dd HH:mm", new Date());
+      const closeDT = parse(`${closeDate} ${closeTime}`, "yyyy-MM-dd HH:mm", new Date());
+      const mins = differenceInMinutes(closeDT, openDT);
       if (isNaN(mins) || mins < 0) return "";
       const hours = Math.floor(mins / 60);
       const remMins = mins % 60;
@@ -77,7 +68,7 @@ export default function JournalPage() {
     }
   };
 
-  // Called when clicking “Add Trade” or “Save Edit”
+  // 5) “Save Trade” covers both add & edit
   const saveTrade = () => {
     const { result, rr } = determineResult(
       newTrade.entryPrice,
@@ -87,38 +78,38 @@ export default function JournalPage() {
     );
 
     if (editingId !== null) {
-      // Update existing trade
+      // Updating an existing trade
       setTrades((prev) =>
         prev.map((t) =>
           t.id === editingId ? { ...newTrade, result, rr, id: editingId } : t
         )
       );
     } else {
-      // Add brand new
+      // Adding a brand‐new trade
       setTrades((prev) => [
         ...prev,
         { ...newTrade, result, rr, id: Date.now() },
       ]);
     }
 
-    // Clear form and exit editing mode
+    // Reset form
     setNewTrade(createEmptyTrade());
     setEditingId(null);
   };
 
-  // Called when user clicks “Edit” on a trade
+  // 6) Start editing: populate form with trade data
   const startEditing = (trade) => {
     setNewTrade({ ...trade });
     setEditingId(trade.id);
   };
 
-  // Called when user clicks “Cancel” while editing
+  // 7) Cancel editing
   const cancelEditing = () => {
     setNewTrade(createEmptyTrade());
     setEditingId(null);
   };
 
-  // Shared styling for all inputs/selects
+  // 8) Common input style
   const inputStyle = {
     backgroundColor: "#1e293b",
     color: "#e5e7eb",
@@ -130,7 +121,7 @@ export default function JournalPage() {
     fontSize: "14px",
   };
 
-  // “Add Trade” / “Save Edit” button style
+  // 9) Button style
   const buttonStyle = {
     backgroundColor: "#3b82f6",
     color: "white",
@@ -151,7 +142,9 @@ export default function JournalPage() {
         padding: "24px",
       }}
     >
-      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>Trading Journal</h1>
+      <h1 style={{ color: "#ec4899", marginBottom: "16px" }}>
+        Trading Journal
+      </h1>
       <button
         onClick={() => navigate("/performance")}
         style={{
@@ -168,16 +161,16 @@ export default function JournalPage() {
         Go to Performance
       </button>
 
-      {/* 4-column input grid */}
+      {/* ─────── 4-Column Grid of Inputs ─────── */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: "12px",
-          marginBottom: "24px",
+          marginBottom: "12px",
         }}
       >
-        {/* Column 1 */}
+        {/* Row 1: Pair | Strategy ▼ | Entry Date | Entry Time */}
         <input
           placeholder="Pair"
           value={newTrade.pair}
@@ -185,7 +178,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Column 2: Strategy dropdown */}
         <select
           value={newTrade.strategy}
           onChange={(e) =>
@@ -213,7 +205,6 @@ export default function JournalPage() {
           ))}
         </select>
 
-        {/* Column 3 */}
         <input
           type="date"
           value={newTrade.entryDate}
@@ -223,7 +214,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Column 4 */}
         <input
           type="time"
           value={newTrade.entryTime}
@@ -233,7 +223,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Next row: Entry Price */}
+        {/* Row 2: Entry Price | Stop Loss | Target | Close Price */}
         <input
           type="number"
           placeholder="Entry Price"
@@ -244,7 +234,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Stop Loss */}
         <input
           type="number"
           placeholder="Stop Loss"
@@ -255,7 +244,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Target */}
         <input
           placeholder="Target"
           value={newTrade.target}
@@ -265,7 +253,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Close Price */}
         <input
           type="number"
           placeholder="Close Price"
@@ -276,7 +263,7 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Next row: Close Date */}
+        {/* Row 3: Close Date | Close Time | Notes | Screenshot URL */}
         <input
           type="date"
           value={newTrade.closeDate}
@@ -286,7 +273,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Close Time */}
         <input
           type="time"
           value={newTrade.closeTime}
@@ -296,7 +282,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Notes */}
         <input
           placeholder="Notes"
           value={newTrade.notes}
@@ -304,7 +289,6 @@ export default function JournalPage() {
           style={inputStyle}
         />
 
-        {/* Screenshot URL */}
         <input
           placeholder="Screenshot URL"
           value={newTrade.screenshot}
@@ -315,7 +299,17 @@ export default function JournalPage() {
         />
       </div>
 
-      {/* Add / Save / Cancel buttons */}
+      {/* ─────── TradingView Link (full width) ─────── */}
+      <input
+        placeholder="TradingView Setup Link"
+        value={newTrade.tradingViewLink}
+        onChange={(e) =>
+          setNewTrade((p) => ({ ...p, tradingViewLink: e.target.value }))
+        }
+        style={{ ...inputStyle, marginBottom: "24px" }}
+      />
+
+      {/* ─────── Save / Cancel Buttons ─────── */}
       <div style={{ marginBottom: "32px" }}>
         <button onClick={saveTrade} style={buttonStyle}>
           {editingId !== null ? "Save Changes" : "Add Trade"}
@@ -338,9 +332,10 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* Display the trades in a 4-column grid */}
+      {/* ─────── List of Logged Trades ─────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {trades.map((trade) => {
+          // Recalculate result & rr
           const { result, rr } = determineResult(
             trade.entryPrice,
             trade.stopLoss,
@@ -354,6 +349,16 @@ export default function JournalPage() {
             trade.closeTime
           );
 
+          // Convert R/R ratio to percentage with sign
+          let rrPctDisplay = "";
+          if (rr !== "" && !isNaN(parseFloat(rr))) {
+            const pct = (parseFloat(rr) * 100).toFixed(0);
+            if (result === "Win") rrPctDisplay = `+${pct}%`;
+            else if (result === "Loss") rrPctDisplay = `-${pct}%`;
+            else rrPctDisplay = "0%";
+          }
+
+          // Color‐coding: green=Win, red=Loss, gold=BE
           const resultColor =
             result === "Win"
               ? "#34d399"
@@ -375,12 +380,12 @@ export default function JournalPage() {
                 fontSize: "14px",
               }}
             >
-              {/* Col 1 */}
+              {/* Column 1 */}
               <div>
-                <strong>Pair:</strong> {trade.pair}
+                <strong>Pair:</strong> {trade.pair || "—"}
               </div>
               <div>
-                <strong>Entry:</strong> {trade.entryPrice}
+                <strong>Entry:</strong> {trade.entryPrice || "—"}
               </div>
               <div>
                 <strong>Result:</strong>{" "}
@@ -388,55 +393,88 @@ export default function JournalPage() {
               </div>
               <div>
                 <strong>Entry D/T:</strong>{" "}
-                {trade.entryDate && format(parse(trade.entryDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}{" "}
-                {trade.entryTime}
+                {trade.entryDate
+                  ? format(parse(trade.entryDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                  : "—"}{" "}
+                {trade.entryTime || "—"}
               </div>
 
-              {/* Col 2 */}
+              {/* Column 2 */}
               <div>
-                <strong>Strategy:</strong> {trade.strategy}
+                <strong>Strategy:</strong> {trade.strategy || "—"}
               </div>
               <div>
-                <strong>Stop:</strong> {trade.stopLoss}
+                <strong>Stop:</strong> {trade.stopLoss || "—"}
               </div>
               <div>
-                <strong>R:R:</strong>{" "}
-                <span style={{ color: resultColor }}>{rr}</span>
+                <strong>R/R %:</strong>{" "}
+                <span style={{ color: resultColor }}>{rrPctDisplay}</span>
               </div>
               <div>
                 <strong>Close D/T:</strong>{" "}
-                {trade.closeDate && format(parse(trade.closeDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")}{" "}
-                {trade.closeTime}
+                {trade.closeDate
+                  ? format(parse(trade.closeDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                  : "—"}{" "}
+                {trade.closeTime || "—"}
               </div>
 
-              {/* Col 3 */}
+              {/* Column 3 */}
               <div>
-                <strong>Target:</strong> {trade.target}
+                <strong>Target:</strong> {trade.target || "—"}
               </div>
               <div>
-                <strong>Close:</strong> {trade.closePrice}
+                <strong>Close:</strong> {trade.closePrice || "—"}
               </div>
               <div>
-                <strong>Duration:</strong> {duration}
+                <strong>Duration:</strong> {duration || "—"}
               </div>
               <div>
-                <strong>Notes:</strong> {trade.notes}
+                <strong>Notes:</strong> {trade.notes || "—"}
               </div>
 
-              {/* Col 4 */}
-              <div>
-                {trade.screenshot && (
+              {/* Column 4: Screenshot thumbnail, TV link, and Edit */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                {trade.screenshot ? (
+                  <img
+                    src={trade.screenshot}
+                    alt="screenshot thumbnail"
+                    style={{
+                      maxWidth: "100px",
+                      maxHeight: "60px",
+                      borderRadius: "4px",
+                      objectFit: "cover",
+                      border: "1px solid #334155",
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: "#64748b" }}>No Image</div>
+                )}
+
+                {trade.tradingViewLink ? (
                   <a
-                    href={trade.screenshot}
+                    href={trade.tradingViewLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "#3b82f6", textDecoration: "underline" }}
+                    style={{
+                      color: "#60a5fa",
+                      textDecoration: "underline",
+                      fontSize: "13px",
+                    }}
                   >
-                    View Screenshot
+                    View Setup
                   </a>
+                ) : (
+                  <div style={{ color: "#64748b", fontSize: "13px" }}>
+                    No Setup Link
+                  </div>
                 )}
-              </div>
-              <div>
+
                 <button
                   onClick={() => startEditing(trade)}
                   style={{
@@ -447,6 +485,7 @@ export default function JournalPage() {
                     padding: "6px 10px",
                     cursor: "pointer",
                     fontSize: "13px",
+                    alignSelf: "flex-start",
                   }}
                 >
                   Edit
