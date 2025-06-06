@@ -22,6 +22,8 @@ export default function JournalPage() {
     notes: "",
     screenshot: ""
   });
+  const [editIndex, setEditIndex] = useState(null);
+  const [editTrade, setEditTrade] = useState({});
   const navigate = useNavigate();
 
   const determineResult = (e, s, t, c) => {
@@ -71,6 +73,24 @@ export default function JournalPage() {
     });
   };
 
+  const startEdit = (idx) => {
+    setEditIndex(idx);
+    setEditTrade({ ...trades[idx] });
+  };
+
+  const saveEdit = () => {
+    const { result, rr } = determineResult(editTrade.entry, editTrade.stop, editTrade.target, editTrade.close);
+    const duration = calculateDuration(editTrade.openDate, editTrade.openTime, editTrade.closeDate, editTrade.closeTime);
+    updateTrade(editIndex, { ...editTrade, result, rr, duration });
+    setEditIndex(null);
+    setEditTrade({});
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditTrade({});
+  };
+
   return (
     <div style={{ backgroundColor: "#0b1120", color: "#e5e7eb", minHeight: "100vh", padding: 24 }}>
       <h1 style={{ color: "#ec4899" }}>Trading Journal</h1>
@@ -80,7 +100,6 @@ export default function JournalPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         <input placeholder="Pair" value={newTrade.pair} onChange={(e) => setNewTrade({ ...newTrade, pair: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <select value={newTrade.strategy} onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }}>
           <option value="">Select Strategy</option>
           <option value="ORB">ORB</option>
@@ -89,27 +108,16 @@ export default function JournalPage() {
           <option value="Phantom Flow">Phantom Flow</option>
           <option value="Pip Snatcher">Pip Snatcher</option>
         </select>
-
         <input placeholder="Entry" value={newTrade.entry} onChange={(e) => setNewTrade({ ...newTrade, entry: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input placeholder="Stop" value={newTrade.stop} onChange={(e) => setNewTrade({ ...newTrade, stop: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input placeholder="Target" value={newTrade.target} onChange={(e) => setNewTrade({ ...newTrade, target: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input placeholder="Close" value={newTrade.close} onChange={(e) => setNewTrade({ ...newTrade, close: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input type="date" value={newTrade.openDate} onChange={(e) => setNewTrade({ ...newTrade, openDate: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input type="time" value={newTrade.openTime} onChange={(e) => setNewTrade({ ...newTrade, openTime: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input type="date" value={newTrade.closeDate} onChange={(e) => setNewTrade({ ...newTrade, closeDate: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input type="time" value={newTrade.closeTime} onChange={(e) => setNewTrade({ ...newTrade, closeTime: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input placeholder="Notes" value={newTrade.notes} onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <input placeholder="Screenshot URL" value={newTrade.screenshot} onChange={(e) => setNewTrade({ ...newTrade, screenshot: e.target.value })} style={{ backgroundColor: "#1f2937", color: "#e5e7eb", border: "1px solid #374151", borderRadius: 4, padding: 8 }} />
-
         <button onClick={handleAdd} style={{ backgroundColor: "#fbbf24", color: "#0b1120", border: "none", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>
           Add Trade
         </button>
@@ -118,19 +126,41 @@ export default function JournalPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         {trades.map((trade, idx) => (
           <div key={idx} style={{ backgroundColor: "#1f2937", padding: 12, borderRadius: 4 }}>
-            <div><strong>Pair:</strong> {trade.pair}</div>
-            <div><strong>Strategy:</strong> {trade.strategy}</div>
-            <div><strong>Entry:</strong> {trade.entry}</div>
-            <div><strong>Stop:</strong> {trade.stop}</div>
-            <div><strong>Target:</strong> {trade.target}</div>
-            <div><strong>Close:</strong> {trade.close}</div>
-            <div><strong>Result:</strong> {trade.result}</div>
-            <div><strong>R:R:</strong> {trade.rr}%</div>
-            <div><strong>Open:</strong> {trade.openDate} {trade.openTime}</div>
-            <div><strong>Close:</strong> {trade.closeDate} {trade.closeTime}</div>
-            <div><strong>Duration:</strong> {trade.duration}</div>
-            <div><strong>Notes:</strong> {trade.notes}</div>
-            {trade.screenshot && <img src={trade.screenshot} alt="" style={{ width: 80, marginTop: 8 }} />}
+            {editIndex === idx ? (
+              <>
+                <input value={editTrade.pair} onChange={(e) => setEditTrade({ ...editTrade, pair: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.strategy} onChange={(e) => setEditTrade({ ...editTrade, strategy: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.entry} onChange={(e) => setEditTrade({ ...editTrade, entry: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.stop} onChange={(e) => setEditTrade({ ...editTrade, stop: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.target} onChange={(e) => setEditTrade({ ...editTrade, target: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.close} onChange={(e) => setEditTrade({ ...editTrade, close: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input type="date" value={editTrade.openDate} onChange={(e) => setEditTrade({ ...editTrade, openDate: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input type="time" value={editTrade.openTime} onChange={(e) => setEditTrade({ ...editTrade, openTime: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input type="date" value={editTrade.closeDate} onChange={(e) => setEditTrade({ ...editTrade, closeDate: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input type="time" value={editTrade.closeTime} onChange={(e) => setEditTrade({ ...editTrade, closeTime: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.notes} onChange={(e) => setEditTrade({ ...editTrade, notes: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <input value={editTrade.screenshot} onChange={(e) => setEditTrade({ ...editTrade, screenshot: e.target.value })} style={{ width: "100%", backgroundColor: "#374151", color: "#e5e7eb", border: "none", borderRadius: 4, marginBottom: 4 }} />
+                <button onClick={saveEdit} style={{ backgroundColor: "#34d399", color: "white", border: "none", borderRadius: 4, padding: "6px 10px", cursor: "pointer", marginRight: 4 }}>Save</button>
+                <button onClick={cancelEdit} style={{ backgroundColor: "#f87171", color: "white", border: "none", borderRadius: 4, padding: "6px 10px", cursor: "pointer" }}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <div><strong>Pair:</strong> {trade.pair}</div>
+                <div><strong>Strategy:</strong> {trade.strategy}</div>
+                <div><strong>Entry:</strong> {trade.entry}</div>
+                <div><strong>Stop:</strong> {trade.stop}</div>
+                <div><strong>Target:</strong> {trade.target}</div>
+                <div><strong>Close:</strong> {trade.close}</div>
+                <div><strong>Result:</strong> {trade.result}</div>
+                <div><strong>R:R:</strong> {trade.rr}%</div>
+                <div><strong>Open:</strong> {trade.openDate} {trade.openTime}</div>
+                <div><strong>Close:</strong> {trade.closeDate} {trade.closeTime}</div>
+                <div><strong>Duration:</strong> {trade.duration}</div>
+                <div><strong>Notes:</strong> {trade.notes}</div>
+                {trade.screenshot && <img src={trade.screenshot} alt="" style={{ width: 80, marginTop: 8 }} />}
+                <button onClick={() => startEdit(idx)} style={{ backgroundColor: "#fbbf24", color: "#0b1120", border: "none", borderRadius: 4, padding: "6px 10px", cursor: "pointer", marginTop: 8 }}>Edit</button>
+              </>
+            )}
           </div>
         ))}
       </div>

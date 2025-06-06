@@ -19,24 +19,30 @@ export default function PerformancePage() {
           ).toFixed(1)
         : "0.0";
     const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
-
     const sortedByRR = [...trades]
       .map((t) => parseFloat(t.rr) || 0)
       .sort((a, b) => b - a);
     const best = sortedByRR.length ? sortedByRR[0] : 0;
     const worst = sortedByRR.length ? sortedByRR[sortedByRR.length - 1] : 0;
-
     return { total, wins, losses, breakevens, avgRR, winRate, best, worst };
   }, [trades]);
 
-  const pieData = useMemo(() => {
-    const { wins, losses, breakevens } = stats;
-    return [
-      { label: "Wins", value: wins },
-      { label: "Losses", value: losses },
-      { label: "Breakevens", value: breakevens },
-    ];
-  }, [stats]);
+  const strategyStats = useMemo(() => {
+    const map = {};
+    trades.forEach((t) => {
+      if (!map[t.strategy]) {
+        map[t.strategy] = { count: 0, wins: 0, totalRR: 0 };
+      }
+      map[t.strategy].count += 1;
+      if (t.result.toLowerCase() === "win") map[t.strategy].wins += 1;
+      map[t.strategy].totalRR += parseFloat(t.rr) || 0;
+    });
+    return Object.entries(map).map(([strategy, data]) => {
+      const avg = data.count > 0 ? (data.totalRR / data.count).toFixed(1) : "0.0";
+      const wr = data.count > 0 ? ((data.wins / data.count) * 100).toFixed(1) : "0.0";
+      return { strategy, count: data.count, winRate: wr, avgRR: avg };
+    });
+  }, [trades]);
 
   return (
     <div style={{ backgroundColor: "#0b1120", color: "#e5e7eb", minHeight: "100vh", padding: 24 }}>
@@ -80,16 +86,14 @@ export default function PerformancePage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-        {pieData.map((slice) => (
-          <div key={slice.label} style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, flex: "1 1 120px", textAlign: "center" }}>
-            <div style={{ fontSize: 14, color: "#9ca3af" }}>{slice.label}</div>
-            <div style={{ fontSize: 24, color: slice.label === "Wins" ? "#34d399" : slice.label === "Losses" ? "#f87171" : "#fbbf24" }}>
-              {slice.value}
-            </div>
-            <div style={{ height: 8, marginTop: 8, backgroundColor: "#374151", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ width: `${Math.round((slice.value / stats.total) * 100)}%`, height: "100%", backgroundColor: slice.label === "Wins" ? "#34d399" : slice.label === "Losses" ? "#f87171" : "#fbbf24" }} />
-            </div>
+      <h2 style={{ color: "#ec4899", marginBottom: 12 }}>By Strategy</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+        {strategyStats.map((s) => (
+          <div key={s.strategy} style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 16, color: "#60a5fa", marginBottom: 8 }}>{s.strategy}</div>
+            <div style={{ fontSize: 14, color: "#9ca3af" }}>Trades: {s.count}</div>
+            <div style={{ fontSize: 14, color: "#34d399" }}>Win Rate: {s.winRate}%</div>
+            <div style={{ fontSize: 14, color: "#60a5fa" }}>Avg R:R: {s.avgRR}</div>
           </div>
         ))}
       </div>
