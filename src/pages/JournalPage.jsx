@@ -161,22 +161,13 @@ export default function JournalPage() {
           onChange={(e) => setNewTrade({ ...newTrade, pair: e.target.value })}
           style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
         />
-        <div>
-          <input
-            list="strategies"
-            placeholder="Strategy"
-            value={newTrade.strategy}
-            onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
-            style={{ width: "100%", padding: 8, backgroundColor: "#1f2937", color: "white", border: "none", borderRadius: 4 }}
-          />
-          <datalist id="strategies">
-            <option value="ORB" />
-            <option value="Power Trend" />
-            <option value="Breakout" />
-            <option value="Phantom Flow" />
-            <option value="Pip Snatcher" />
-          </datalist>
-        </div>
+        <input
+          list="strategies"
+          placeholder="Strategy"
+          value={newTrade.strategy}
+          onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
+          style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
+        />
         <input
           placeholder="Entry Price"
           value={newTrade.entry}
