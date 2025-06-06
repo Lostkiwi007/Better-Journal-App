@@ -267,11 +267,10 @@ export default function JournalPage() {
         {editIndex !== null ? "Update Trade" : "Add Trade"}
       </button>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {trades.map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
           const rrColor = rrNum >= 0 ? "#10b981" : "#ef4444";
-          // Determine long vs short by comparing target vs entry
           const isLong = parseFloat(trade.target) > parseFloat(trade.entry);
           const direction = isLong ? "L" : "S";
           const dirColor = isLong ? "#10b981" : "#ef4444";
@@ -292,8 +291,8 @@ export default function JournalPage() {
                 padding: 16,
                 borderRadius: 6,
                 display: "flex",
+                flexDirection: "column",
                 justifyContent: "space-between",
-                alignItems: "center",
               }}
             >
               <div>
@@ -306,7 +305,7 @@ export default function JournalPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
                 <div
                   style={{
                     backgroundColor: dirColor,
@@ -327,17 +326,19 @@ export default function JournalPage() {
                   {rrNum >= 0 ? "+" : "-"}
                   {Math.abs(rrNum).toFixed(2)} R:R
                 </div>
+              </div>
+
+              <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                 <button
                   onClick={() => handleEdit(idx)}
                   style={{
-                    backgroundColor: "#fbbf24",
-                    color: "#0b1120",
-                    border: "none",
+                    backgroundColor: "transparent",
+                    color: "#9ca3af",
+                    border: "1px solid #374151",
                     borderRadius: "4px",
-                    padding: "6px 10px",
+                    padding: "4px 8px",
                     cursor: "pointer",
-                    fontSize: "13px",
-                    alignSelf: "flex-start",
+                    fontSize: "12px",
                   }}
                 >
                   Edit
@@ -345,14 +346,13 @@ export default function JournalPage() {
                 <button
                   onClick={() => handleDelete(idx)}
                   style={{
-                    backgroundColor: "#ef4444",
-                    color: "white",
-                    border: "none",
+                    backgroundColor: "transparent",
+                    color: "#9ca3af",
+                    border: "1px solid #374151",
                     borderRadius: "4px",
-                    padding: "6px 10px",
+                    padding: "4px 8px",
                     cursor: "pointer",
-                    fontSize: "13px",
-                    alignSelf: "flex-start",
+                    fontSize: "12px",
                   }}
                 >
                   Delete
