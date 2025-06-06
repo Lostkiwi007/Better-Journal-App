@@ -129,6 +129,12 @@ export default function JournalPage() {
     }
   }, [editIndex]);
 
+  const sortedTrades = [...trades].sort((a, b) => {
+    const dateA = new Date(`${a.closeDate}T${a.closeTime}`);
+    const dateB = new Date(`${b.closeDate}T${b.closeTime}`);
+    return dateB - dateA;
+  });
+
   return (
     <div style={{ backgroundColor: "#0f172a", color: "white", minHeight: "100vh", padding: 24 }}>
       <h1 style={{ color: "#ec4899" }}>Trading Journal</h1>
@@ -268,7 +274,7 @@ export default function JournalPage() {
       </button>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {[...trades].reverse().map((trade, idx) => {
+        {sortedTrades.map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
           const rrColor = rrNum >= 0 ? "#10b981" : "#ef4444";
           const isLong = parseFloat(trade.target) > parseFloat(trade.entry);
@@ -291,11 +297,11 @@ export default function JournalPage() {
                 padding: 16,
                 borderRadius: 6,
                 display: "flex",
-                flexDirection: "column",
                 justifyContent: "space-between",
+                gap: 12,
               }}
             >
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
                 <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
                   {trade.strategy}
@@ -303,65 +309,82 @@ export default function JournalPage() {
                 <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
                   {dateRange}
                 </div>
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      backgroundColor: dirColor,
+                      color: "white",
+                      borderRadius: "50%",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {direction}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
+                    {rrNum >= 0 ? "+" : "-"}
+                    {Math.abs(rrNum).toFixed(2)} R:R
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                 {trade.notes && (
-                  <div style={{ fontSize: 12, color: "#d1d5db", marginTop: 8 }}>
+                  <div style={{ fontSize: 12, color: "#d1d5db", backgroundColor: "#111827", padding: 8, borderRadius: 4 }}>
                     {trade.notes}
                   </div>
                 )}
-              </div>
-
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    backgroundColor: dirColor,
-                    color: "white",
-                    borderRadius: "50%",
-                    width: 24,
-                    height: 24,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  {direction}
+                <div style={{ display: "flex", gap: 8 }}>
+                  {trade.setupUrl && (
+                    <img
+                      src={trade.setupUrl}
+                      alt="setup"
+                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4 }}
+                    />
+                  )}
+                  {trade.screenshot && (
+                    <img
+                      src={trade.screenshot}
+                      alt="trade"
+                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4 }}
+                    />
+                  )}
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
-                  {rrNum >= 0 ? "+" : "-"}
-                  {Math.abs(rrNum).toFixed(2)} R:R
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                  <button
+                    onClick={() => handleEdit(trades.indexOf(trade))}
+                    style={{
+                      backgroundColor: "transparent",
+                      color: "#9ca3af",
+                      border: "1px solid #374151",
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(trades.indexOf(trade))}
+                    style={{
+                      backgroundColor: "transparent",
+                      color: "#9ca3af",
+                      border: "1px solid #374151",
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
-              </div>
-
-              <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <button
-                  onClick={() => handleEdit(trades.length - 1 - idx)}
-                  style={{
-                    backgroundColor: "transparent",
-                    color: "#9ca3af",
-                    border: "1px solid #374151",
-                    borderRadius: "4px",
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(trades.length - 1 - idx)}
-                  style={{
-                    backgroundColor: "transparent",
-                    color: "#9ca3af",
-                    border: "1px solid #374151",
-                    borderRadius: "4px",
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                  }}
-                >
-                  Delete
-                </button>
               </div>
             </div>
           );
