@@ -268,7 +268,7 @@ export default function JournalPage() {
       </button>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {trades.map((trade, idx) => {
+        {[...trades].reverse().map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
           const rrColor = rrNum >= 0 ? "#10b981" : "#ef4444";
           const isLong = parseFloat(trade.target) > parseFloat(trade.entry);
@@ -303,6 +303,11 @@ export default function JournalPage() {
                 <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
                   {dateRange}
                 </div>
+                {trade.notes && (
+                  <div style={{ fontSize: 12, color: "#d1d5db", marginTop: 8 }}>
+                    {trade.notes}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
@@ -330,7 +335,7 @@ export default function JournalPage() {
 
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                 <button
-                  onClick={() => handleEdit(idx)}
+                  onClick={() => handleEdit(trades.length - 1 - idx)}
                   style={{
                     backgroundColor: "transparent",
                     color: "#9ca3af",
@@ -344,7 +349,7 @@ export default function JournalPage() {
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(idx)}
+                  onClick={() => handleDelete(trades.length - 1 - idx)}
                   style={{
                     backgroundColor: "transparent",
                     color: "#9ca3af",
