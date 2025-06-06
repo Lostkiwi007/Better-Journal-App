@@ -2,6 +2,7 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
+import { parseISO, format } from "date-fns";
 
 export default function JournalPage() {
   const { trades, setTrades } = useContext(TradesContext);
@@ -32,8 +33,8 @@ export default function JournalPage() {
     if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) return { result: "", rr: "" };
     const risk = Math.abs(e - s);
     const reward = Math.abs(t - e);
-    const rrVal = reward !== 0 ? (Math.abs(c - e) / risk) * 100 : 0;
-    const rr = rrVal.toFixed(0);
+    const rrVal = reward / risk; // e.g. 1.0, 2.5, etc.
+    const rr = rrVal.toFixed(2);
     let result = "BE";
     if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
     else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
@@ -205,67 +206,66 @@ export default function JournalPage() {
         Add Trade
       </button>
 
-      <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {trades.map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
           const rrColor = rrNum >= 0 ? "#10b981" : "#ef4444";
+          const direction =
+            parseFloat(trade.close) > parseFloat(trade.entry) ? "L" : "S";
+          const dirColor = direction === "L" ? "#10b981" : "#ef4444";
+          const openFormatted =
+            trade.openDate && format(parseISO(trade.openDate), "EEE, do MMM yyyy");
+          const closeFormatted =
+            trade.closeDate && format(parseISO(trade.closeDate), "EEE, do MMM yyyy");
+          const dateRange =
+            openFormatted && closeFormatted
+              ? `${openFormatted} - ${closeFormatted}`
+              : "";
+
           return (
             <div
               key={idx}
               style={{
                 backgroundColor: "#1f2937",
-                padding: 12,
-                marginBottom: 12,
-                borderRadius: 4,
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                gap: 12,
+                padding: 16,
+                borderRadius: 6,
+                display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <div><strong>Pair:</strong> {trade.pair}</div>
-              <div><strong>Strategy:</strong> {trade.strategy}</div>
-              <div><strong>Entry:</strong> {trade.entry}</div>
-              <div><strong>Stop:</strong> {trade.stop}</div>
-              <div><strong>Target:</strong> {trade.target}</div>
-              <div><strong>Close:</strong> {trade.close}</div>
               <div>
-                <strong>R:R:</strong>{" "}
-                <span style={{ color: rrColor }}>{trade.rr}</span>
-              </div>
-              <div>
-                <strong>Open:</strong> {trade.openDate} {trade.openTime}
-              </div>
-              <div>
-                <strong>Close:</strong> {trade.closeDate} {trade.closeTime}
-              </div>
-              <div style={{ gridColumn: "span 2" }}>
-                <strong>Notes:</strong> {trade.notes}
-              </div>
-              {trade.setupUrl && (
-                <div>
-                  <a
-                    href={trade.setupUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#60a5fa", textDecoration: "underline" }}
-                  >
-                    View Setup
-                  </a>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
+                <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
+                  {trade.strategy}
                 </div>
-              )}
-              {trade.screenshot && (
-                <div>
-                  <a
-                    href={trade.screenshot}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#60a5fa", textDecoration: "underline" }}
-                  >
-                    View Screenshot
-                  </a>
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                  {dateRange}
                 </div>
-              )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    backgroundColor: dirColor,
+                    color: "white",
+                    borderRadius: "50%",
+                    width: 24,
+                    height: 24,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  {direction}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
+                  {rrNum >= 0 ? "+" : "-"}
+                  {Math.abs(rrNum).toFixed(2)} R:R
+                </div>
+              </div>
             </div>
           );
         })}
