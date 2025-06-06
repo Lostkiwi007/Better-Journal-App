@@ -1,102 +1,155 @@
-// File: src/pages/PerformancePage.jsx
-import React, { useContext, useMemo } from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
+import CalendarView from "./CalendarView";
 
 export default function PerformancePage() {
-  const navigate = useNavigate();
   const { trades } = useContext(TradesContext);
+  const navigate = useNavigate();
 
-  const stats = useMemo(() => {
-    const total = trades.length;
-    const wins = trades.filter((t) => t.result.toLowerCase() === "win").length;
-    const losses = trades.filter((t) => t.result.toLowerCase() === "loss").length;
-    const breakevens = trades.filter((t) => t.result.toLowerCase() === "be").length;
-    const avgRR =
-      total > 0
-        ? (
-            trades.reduce((sum, t) => sum + (parseFloat(t.rr) || 0), 0) / total
-          ).toFixed(1)
-        : "0.0";
-    const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
-    const sortedByRR = [...trades]
-      .map((t) => parseFloat(t.rr) || 0)
-      .sort((a, b) => b - a);
-    const best = sortedByRR.length ? sortedByRR[0] : 0;
-    const worst = sortedByRR.length ? sortedByRR[sortedByRR.length - 1] : 0;
-    return { total, wins, losses, breakevens, avgRR, winRate, best, worst };
-  }, [trades]);
+  // Compute overall P/L, average R:R, best trade, worst trade
+  const computeStats = () => {
+    if (trades.length === 0) {
+      return {
+        totalPL: 0,
+        avgRR: 0,
+        bestRR: 0,
+        worstRR: 0
+      };
+    }
 
-  const strategyStats = useMemo(() => {
-    const map = {};
-    trades.forEach((t) => {
-      if (!map[t.strategy]) {
-        map[t.strategy] = { count: 0, wins: 0, totalRR: 0 };
+    const rrValues = trades
+      .map((t) => {
+        const entry = parseFloat(t.entry);
+        const stop = parseFloat(t.stop);
+        const close = parseFloat(t.close);
+        if (isNaN(entry) || isNaN(stop) || isNaN(close)) return null;
+
+        const risk = Math.abs(entry - stop);
+        const reward = Math.abs(close - entry);
+        if (risk === 0) return null;
+        return (reward / risk) * (close >= entry ? 1 : -1);
+      })
+      .filter((v) => v !== null);
+
+    const totalPL = trades.reduce((sum, t) => {
+      const entry = parseFloat(t.entry);
+      const close = parseFloat(t.close);
+      if (!isNaN(entry) && !isNaN(close)) {
+        return sum + (close - entry);
       }
-      map[t.strategy].count += 1;
-      if (t.result.toLowerCase() === "win") map[t.strategy].wins += 1;
-      map[t.strategy].totalRR += parseFloat(t.rr) || 0;
+      return sum;
+    }, 0);
+
+    const avgRR =
+      rrValues.length > 0
+        ? rrValues.reduce((a, b) => a + b, 0) / rrValues.length
+        : 0;
+    const bestRR = rrValues.length > 0 ? Math.max(...rrValues) : 0;
+    const worstRR = rrValues.length > 0 ? Math.min(...rrValues) : 0;
+
+    return { totalPL, avgRR, bestRR, worstRR };
+  };
+
+  const { totalPL, avgRR, bestRR, worstRR } = computeStats();
+
+  // Compute per-strategy stats
+  const strategyStats = () => {
+    const byStrategy = {};
+    trades.forEach((t) => {
+      const strat = t.strategy || "—";
+      const entry = parseFloat(t.entry);
+      const stop = parseFloat(t.stop);
+      const close = parseFloat(t.close);
+      if (isNaN(entry) || isNaN(stop) || isNaN(close)) return;
+
+      const risk = Math.abs(entry - stop);
+      const reward = Math.abs(close - entry);
+      const rr = risk === 0 ? 0 : (reward / risk) * (close >= entry ? 1 : -1);
+
+      if (!byStrategy[strat]) {
+        byStrategy[strat] = { count: 0, totalRR: 0, best: rr, worst: rr };
+      }
+      byStrategy[strat].count += 1;
+      byStrategy[strat].totalRR += rr;
+      if (rr > byStrategy[strat].best) byStrategy[strat].best = rr;
+      if (rr < byStrategy[strat].worst) byStrategy[strat].worst = rr;
     });
-    return Object.entries(map).map(([strategy, data]) => {
-      const avg = data.count > 0 ? (data.totalRR / data.count).toFixed(1) : "0.0";
-      const wr = data.count > 0 ? ((data.wins / data.count) * 100).toFixed(1) : "0.0";
-      return { strategy, count: data.count, winRate: wr, avgRR: avg };
-    });
-  }, [trades]);
+
+    return Object.entries(byStrategy).map(([strat, data]) => ({
+      strategy: strat,
+      trades: data.count,
+      avgRR: data.count > 0 ? data.totalRR / data.count : 0,
+      bestRR: data.best,
+      worstRR: data.worst
+    }));
+  };
+
+  const perStrat = strategyStats();
 
   return (
-    <div style={{ backgroundColor: "#0b1120", color: "#e5e7eb", minHeight: "100vh", padding: 24 }}>
+    <div style={{ backgroundColor: "#0f172a", color: "white", minHeight: "100vh", padding: 24 }}>
       <h1 style={{ color: "#34d399" }}>Performance Summary</h1>
-      <button onClick={() => navigate("/")} style={{ marginBottom: 24, padding: "8px 12px", backgroundColor: "#60a5fa", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+      <button
+        onClick={() => navigate("/")}
+        style={{
+          display: "inline-block",
+          marginBottom: 16,
+          padding: "8px 12px",
+          backgroundColor: "#60a5fa",
+          color: "white",
+          borderRadius: 4,
+          textDecoration: "none",
+        }}
+      >
         Back to Journal
       </button>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginBottom: 40 }}>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Total Trades</div>
-          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.total}</div>
+      <div style={{ marginTop: 16 }}>
+        <div style={{ marginBottom: 12 }}>
+          <strong>Total P/L:</strong> ${totalPL.toFixed(2)}
         </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Wins</div>
-          <div style={{ fontSize: 28, color: "#34d399" }}>{stats.wins}</div>
+        <div style={{ marginBottom: 12 }}>
+          <strong>Average R:R:</strong> {avgRR.toFixed(2)}
         </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Losses</div>
-          <div style={{ fontSize: 28, color: "#f87171" }}>{stats.losses}</div>
+        <div style={{ marginBottom: 12 }}>
+          <strong>Best R:R:</strong> {bestRR.toFixed(2)}
         </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Breakevens</div>
-          <div style={{ fontSize: 28, color: "#fbbf24" }}>{stats.breakevens}</div>
-        </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Win Rate</div>
-          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.winRate}%</div>
-        </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Avg R:R</div>
-          <div style={{ fontSize: 28, color: "#60a5fa" }}>{stats.avgRR}</div>
-        </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Best R:R</div>
-          <div style={{ fontSize: 28, color: "#34d399" }}>{stats.best}</div>
-        </div>
-        <div style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "#9ca3af" }}>Worst R:R</div>
-          <div style={{ fontSize: 28, color: "#f87171" }}>{stats.worst}</div>
+        <div style={{ marginBottom: 12 }}>
+          <strong>Worst R:R:</strong> {worstRR.toFixed(2)}
         </div>
       </div>
 
-      <h2 style={{ color: "#ec4899", marginBottom: 12 }}>By Strategy</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
-        {strategyStats.map((s) => (
-          <div key={s.strategy} style={{ backgroundColor: "#1f2937", borderRadius: 6, padding: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 16, color: "#60a5fa", marginBottom: 8 }}>{s.strategy}</div>
-            <div style={{ fontSize: 14, color: "#9ca3af" }}>Trades: {s.count}</div>
-            <div style={{ fontSize: 14, color: "#34d399" }}>Win Rate: {s.winRate}%</div>
-            <div style={{ fontSize: 14, color: "#60a5fa" }}>Avg R:R: {s.avgRR}</div>
-          </div>
-        ))}
-      </div>
+      {perStrat.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <h2 style={{ color: "#ec4899" }}>By Strategy</h2>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: 8, color: "#9ca3af" }}>Strategy</th>
+                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Trades</th>
+                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Avg R:R</th>
+                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Best R:R</th>
+                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Worst R:R</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perStrat.map(({ strategy, trades, avgRR, bestRR, worstRR }) => (
+                <tr key={strategy}>
+                  <td style={{ padding: 8 }}>{strategy}</td>
+                  <td style={{ padding: 8, textAlign: "right" }}>{trades}</td>
+                  <td style={{ padding: 8, textAlign: "right" }}>{avgRR.toFixed(2)}</td>
+                  <td style={{ padding: 8, textAlign: "right" }}>{bestRR.toFixed(2)}</td>
+                  <td style={{ padding: 8, textAlign: "right" }}>{worstRR.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2 style={{ color: "#ec4899", marginTop: 32 }}>Calendar Performance View</h2>
+      <CalendarView />
     </div>
   );
 }
