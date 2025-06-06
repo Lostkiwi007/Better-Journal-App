@@ -328,7 +328,8 @@ export default function JournalPage() {
                 gap: 12,
               }}
             >
-              <div>
+              {/* Top section: pair, strategy, dates, result */}
+              <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
                 <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
                   {trade.strategy}
@@ -336,76 +337,83 @@ export default function JournalPage() {
                 <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
                   {dateRange}
                 </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div
-                  style={{
-                    backgroundColor: dirColor,
-                    color: "white",
-                    borderRadius: "50%",
-                    width: 24,
-                    height: 24,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  {direction}
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
-                  {rrNum >= 0 ? "+" : "-"}
-                  {Math.abs(rrNum).toFixed(2)} R:R
-                </div>
-              </div>
-
-              {trade.notes && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#d1d5db",
-                    backgroundColor: "#111827",
-                    padding: 8,
-                    borderRadius: 4,
-                  }}
-                >
-                  {trade.notes}
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 8 }}>
-                {trade.setupUrl && (
-                  <img
-                    src={trade.setupUrl}
-                    alt="setup"
-                    onClick={() => setModalImage(trade.setupUrl)}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <div
                     style={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 4,
-                      cursor: "pointer",
+                      backgroundColor: dirColor,
+                      color: "white",
+                      borderRadius: "50%",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      fontSize: 14,
+                      fontWeight: 600,
                     }}
-                  />
-                )}
-                {trade.screenshot && (
-                  <img
-                    src={trade.screenshot}
-                    alt="trade"
-                    onClick={() => setModalImage(trade.screenshot)}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                    }}
-                  />
-                )}
+                  >
+                    {direction}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
+                    {rrNum >= 0 ? "+" : "-"}
+                    {Math.abs(rrNum).toFixed(2)} R:R
+                  </div>
+                </div>
               </div>
 
+              {/* Middle section: left empty, right: notes & thumbnails */}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ flex: 1 }}></div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                  {trade.notes && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#d1d5db",
+                        backgroundColor: "#111827",
+                        padding: 8,
+                        borderRadius: 4,
+                        maxWidth: "200px",
+                        textAlign: "right",
+                      }}
+                    >
+                      {trade.notes}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {trade.setupUrl && (
+                      <img
+                        src={trade.setupUrl}
+                        alt="setup"
+                        onClick={() => setModalImage(trade.setupUrl)}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    )}
+                    {trade.screenshot && (
+                      <img
+                        src={trade.screenshot}
+                        alt="trade"
+                        onClick={() => setModalImage(trade.screenshot)}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom section: edit/delete buttons */}
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                 <button
                   onClick={() => handleEdit(trades.indexOf(trade))}
