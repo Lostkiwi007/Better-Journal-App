@@ -1,5 +1,5 @@
 // File: src/pages/JournalPage.jsx
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
 import { parseISO, format } from "date-fns";
@@ -23,6 +23,7 @@ export default function JournalPage() {
     setupUrl: "",
     screenshot: "",
   });
+  const [editIndex, setEditIndex] = useState(null);
   const navigate = useNavigate();
 
   const determineResult = (entry, stop, target, close) => {
@@ -33,7 +34,7 @@ export default function JournalPage() {
     if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) return { result: "", rr: "" };
     const risk = Math.abs(e - s);
     const reward = Math.abs(t - e);
-    const rrVal = reward / risk; // e.g. 1.0, 2.5, etc.
+    const rrVal = reward / risk;
     const rr = rrVal.toFixed(2);
     let result = "BE";
     if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
@@ -41,14 +42,22 @@ export default function JournalPage() {
     return { result, rr };
   };
 
-  const addTrade = () => {
+  const handleSubmit = () => {
     const { result, rr } = determineResult(
       newTrade.entry,
       newTrade.stop,
       newTrade.target,
       newTrade.close
     );
-    setTrades([...trades, { ...newTrade, result, rr }]);
+    const tradeData = { ...newTrade, result, rr };
+    if (editIndex !== null) {
+      const updated = [...trades];
+      updated[editIndex] = tradeData;
+      setTrades(updated);
+      setEditIndex(null);
+    } else {
+      setTrades([...trades, tradeData]);
+    }
     setNewTrade({
       pair: "",
       strategy: "",
@@ -67,6 +76,58 @@ export default function JournalPage() {
       screenshot: "",
     });
   };
+
+  const handleDelete = (idx) => {
+    setTrades(trades.filter((_, i) => i !== idx));
+    if (editIndex === idx) {
+      setEditIndex(null);
+      setNewTrade({
+        pair: "",
+        strategy: "",
+        entry: "",
+        stop: "",
+        target: "",
+        close: "",
+        result: "",
+        rr: "",
+        openDate: "",
+        openTime: "",
+        closeDate: "",
+        closeTime: "",
+        notes: "",
+        setupUrl: "",
+        screenshot: "",
+      });
+    }
+  };
+
+  const handleEdit = (idx) => {
+    const t = trades[idx];
+    setNewTrade({ ...t });
+    setEditIndex(idx);
+  };
+
+  useEffect(() => {
+    if (editIndex === null) {
+      setNewTrade({
+        pair: "",
+        strategy: "",
+        entry: "",
+        stop: "",
+        target: "",
+        close: "",
+        result: "",
+        rr: "",
+        openDate: "",
+        openTime: "",
+        closeDate: "",
+        closeTime: "",
+        notes: "",
+        setupUrl: "",
+        screenshot: "",
+      });
+    }
+  }, [editIndex]);
 
   return (
     <div style={{ backgroundColor: "#0f172a", color: "white", minHeight: "100vh", padding: 24 }}>
@@ -192,9 +253,9 @@ export default function JournalPage() {
       </div>
 
       <button
-        onClick={addTrade}
+        onClick={handleSubmit}
         style={{
-          backgroundColor: "#1d4ed8",
+          backgroundColor: editIndex !== null ? "#d97706" : "#1d4ed8",
           color: "white",
           border: "none",
           borderRadius: 4,
@@ -203,7 +264,7 @@ export default function JournalPage() {
           marginBottom: 24,
         }}
       >
-        Add Trade
+        {editIndex !== null ? "Update Trade" : "Add Trade"}
       </button>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -265,6 +326,36 @@ export default function JournalPage() {
                   {rrNum >= 0 ? "+" : "-"}
                   {Math.abs(rrNum).toFixed(2)} R:R
                 </div>
+                <button
+                  onClick={() => handleEdit(idx)}
+                  style={{
+                    backgroundColor: "#fbbf24",
+                    color: "#0b1120",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(idx)}
+                  style={{
+                    backgroundColor: "#ef4444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           );
