@@ -163,12 +163,6 @@ export default function JournalPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
         <input
-          placeholder="Notes"
-          value={newTrade.notes}
-          onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })}
-          style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
-        />
-        <input
           placeholder="Setup Screenshot URL"
           value={newTrade.setupUrl}
           onChange={(e) => setNewTrade({ ...newTrade, setupUrl: e.target.value })}
@@ -179,6 +173,20 @@ export default function JournalPage() {
           value={newTrade.screenshot}
           onChange={(e) => setNewTrade({ ...newTrade, screenshot: e.target.value })}
           style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
+        />
+        <textarea
+          placeholder="Notes"
+          value={newTrade.notes}
+          onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })}
+          style={{
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "none",
+            borderRadius: 4,
+            gridColumn: "span 2",
+            resize: "vertical",
+            minHeight: 60,
+          }}
         />
       </div>
 
