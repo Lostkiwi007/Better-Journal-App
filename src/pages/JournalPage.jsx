@@ -1,4 +1,3 @@
-// File: src/pages/JournalPage.jsx
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
@@ -45,6 +44,7 @@ export default function JournalPage() {
       newTrade.target,
       newTrade.close
     );
+
     setTrades([
       ...trades,
       {
@@ -53,6 +53,7 @@ export default function JournalPage() {
         rr,
       },
     ]);
+
     setNewTrade({
       pair: "",
       strategy: "",
@@ -68,6 +69,14 @@ export default function JournalPage() {
       setupScreenshot: "",
       resultScreenshot: "",
     });
+  };
+
+  const editTrade = (index) => {
+    // placeholder—fill form with existing values (or any logic you want)
+    const t = trades[index];
+    setNewTrade({ ...t });
+    // remove the old entry so "Add" will replace it
+    setTrades(trades.filter((_, i) => i !== index));
   };
 
   return (
@@ -152,7 +161,7 @@ export default function JournalPage() {
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <input
           type="number"
-          placeholder="Entry Price"
+          placeholder="Entry"
           value={newTrade.entry}
           onChange={(e) => setNewTrade({ ...newTrade, entry: e.target.value })}
           style={{
@@ -194,7 +203,7 @@ export default function JournalPage() {
         />
         <input
           type="number"
-          placeholder="Close Price"
+          placeholder="Close"
           value={newTrade.close}
           onChange={(e) => setNewTrade({ ...newTrade, close: e.target.value })}
           style={{
@@ -356,6 +365,7 @@ export default function JournalPage() {
                 )}
               </div>
               <button
+                onClick={() => editTrade(idx)}
                 style={{
                   marginTop: 8,
                   backgroundColor: "#fbbf24",
