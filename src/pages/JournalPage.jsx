@@ -1,3 +1,4 @@
+// File: src/pages/JournalPage.jsx
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
@@ -27,11 +28,10 @@ export default function JournalPage() {
     const t = parseFloat(target);
     const c = parseFloat(close);
     if (isNaN(e) || isNaN(s) || isNaN(t) || isNaN(c)) return { result: "", rr: "" };
-
     const risk = Math.abs(e - s);
     const reward = Math.abs(c - e);
     const rrValue = risk === 0 ? 0 : reward / risk;
-    const rrString = (rrValue === 0 ? 0 : rrValue).toFixed(2);
+    const rrString = rrValue.toFixed(2);
     let result = "BE";
     if ((e < t && c >= t) || (e > t && c <= t)) result = "Win";
     else if ((e < s && c <= s) || (e > s && c >= s)) result = "Loss";
@@ -45,7 +45,6 @@ export default function JournalPage() {
       newTrade.target,
       newTrade.close
     );
-
     setTrades([
       ...trades,
       {
@@ -54,7 +53,6 @@ export default function JournalPage() {
         rr,
       },
     ]);
-
     setNewTrade({
       pair: "",
       strategy: "",
@@ -90,130 +88,213 @@ export default function JournalPage() {
         Go to Performance
       </button>
 
-      <div style={{ marginBottom: 20 }}>
+      {/* Row: Pair, Strategy, OpenDate, OpenTime */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <input
           placeholder="Pair"
           value={newTrade.pair}
           onChange={(e) => setNewTrade({ ...newTrade, pair: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <select
-          value={newTrade.strategy}
-          onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        >
-          <option value="">Select Strategy</option>
-          <option value="ORB">ORB</option>
-          <option value="Breakout">Breakout</option>
-          <option value="Reversal">Reversal</option>
-          {/* add more options as needed */}
-        </select>
-
-        <input
-          type="date"
-          value={newTrade.openDate}
-          onChange={(e) => setNewTrade({ ...newTrade, openDate: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="time"
-          value={newTrade.openTime}
-          onChange={(e) => setNewTrade({ ...newTrade, openTime: e.target.value })}
-          style={{ width: "23%", marginBottom: 12, padding: 8, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="number"
-          placeholder="Entry Price"
-          value={newTrade.entry}
-          onChange={(e) => setNewTrade({ ...newTrade, entry: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="number"
-          placeholder="Stop Loss"
-          value={newTrade.stop}
-          onChange={(e) => setNewTrade({ ...newTrade, stop: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="date"
-          value={newTrade.closeDate}
-          onChange={(e) => setNewTrade({ ...newTrade, closeDate: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="time"
-          value={newTrade.closeTime}
-          onChange={(e) => setNewTrade({ ...newTrade, closeTime: e.target.value })}
-          style={{ width: "23%", marginBottom: 12, padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="number"
-          placeholder="Target"
-          value={newTrade.target}
-          onChange={(e) => setNewTrade({ ...newTrade, target: e.target.value })}
-          style={{ width: "23%", marginRight: "1%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          type="number"
-          placeholder="Close Price"
-          value={newTrade.close}
-          onChange={(e) => setNewTrade({ ...newTrade, close: e.target.value })}
-          style={{ width: "23%", marginBottom: 12, padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          placeholder="Notes"
-          value={newTrade.notes}
-          onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })}
-          style={{ width: "48%", marginRight: "1%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          placeholder="Setup Screenshot URL"
-          value={newTrade.setupScreenshot}
-          onChange={(e) => setNewTrade({ ...newTrade, setupScreenshot: e.target.value })}
-          style={{ width: "48%", padding: 8, marginTop: 12, backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: 4, color: "#e5e7eb" }}
-        />
-
-        <input
-          placeholder="Result Screenshot URL"
-          value={newTrade.resultScreenshot}
-          onChange={(e) => setNewTrade({ ...newTrade, resultScreenshot: e.target.value })}
           style={{
-            width: "100%",
+            flex: 1,
             padding: 8,
-            marginTop: 12,
             backgroundColor: "#1f2937",
             border: "1px solid #374151",
             borderRadius: 4,
             color: "#e5e7eb",
           }}
         />
-
-        <button
-          onClick={addTrade}
+        <select
+          value={newTrade.strategy}
+          onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
           style={{
-            marginTop: 16,
-            backgroundColor: "#1d4ed8",
-            color: "white",
-            border: "none",
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
             borderRadius: 4,
-            padding: "8px 12px",
-            cursor: "pointer",
+            color: "#e5e7eb",
           }}
         >
-          Add Trade
-        </button>
+          <option value="">Select Strategy</option>
+          <option value="ORB">ORB</option>
+          <option value="Breakout">Breakout</option>
+          <option value="Reversal">Reversal</option>
+        </select>
+        <input
+          type="date"
+          value={newTrade.openDate}
+          onChange={(e) => setNewTrade({ ...newTrade, openDate: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          type="time"
+          value={newTrade.openTime}
+          onChange={(e) => setNewTrade({ ...newTrade, openTime: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
       </div>
+
+      {/* Row: Entry, Stop, Target, Close */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        <input
+          type="number"
+          placeholder="Entry Price"
+          value={newTrade.entry}
+          onChange={(e) => setNewTrade({ ...newTrade, entry: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          type="number"
+          placeholder="Stop Loss"
+          value={newTrade.stop}
+          onChange={(e) => setNewTrade({ ...newTrade, stop: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          type="number"
+          placeholder="Target"
+          value={newTrade.target}
+          onChange={(e) => setNewTrade({ ...newTrade, target: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          type="number"
+          placeholder="Close Price"
+          value={newTrade.close}
+          onChange={(e) => setNewTrade({ ...newTrade, close: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+      </div>
+
+      {/* Row: CloseDate, CloseTime, Notes */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        <input
+          type="date"
+          value={newTrade.closeDate}
+          onChange={(e) => setNewTrade({ ...newTrade, closeDate: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          type="time"
+          value={newTrade.closeTime}
+          onChange={(e) => setNewTrade({ ...newTrade, closeTime: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          placeholder="Notes"
+          value={newTrade.notes}
+          onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })}
+          style={{
+            flex: 2,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+      </div>
+
+      {/* Row: Setup Screenshot, Result Screenshot */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        <input
+          placeholder="Setup Screenshot URL"
+          value={newTrade.setupScreenshot}
+          onChange={(e) => setNewTrade({ ...newTrade, setupScreenshot: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+        <input
+          placeholder="Result Screenshot URL"
+          value={newTrade.resultScreenshot}
+          onChange={(e) => setNewTrade({ ...newTrade, resultScreenshot: e.target.value })}
+          style={{
+            flex: 1,
+            padding: 8,
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: 4,
+            color: "#e5e7eb",
+          }}
+        />
+      </div>
+
+      <button
+        onClick={addTrade}
+        style={{
+          marginTop: 8,
+          backgroundColor: "#1d4ed8",
+          color: "white",
+          border: "none",
+          borderRadius: 4,
+          padding: "8px 12px",
+          cursor: "pointer",
+        }}
+      >
+        Add Trade
+      </button>
 
       <div style={{ marginTop: 32 }}>
         {trades.map((trade, idx) => (
