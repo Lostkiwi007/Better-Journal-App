@@ -8,55 +8,54 @@ import {
   endOfMonth,
   eachDayOfInterval,
   parseISO,
-  differenceInMinutes,
 } from "date-fns";
 
 export default function PerformancePage() {
   const { trades } = useContext(TradesContext);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth] = useState(new Date());
 
-  // Overall statistics
+  // Overall stats
   const totalTrades = trades.length;
   const wins = trades.filter((t) => t.result === "Win").length;
   const losses = trades.filter((t) => t.result === "Loss").length;
   const avgRR =
     totalTrades > 0
-      ? (
-          trades.reduce((sum, t) => sum + parseFloat(t.rr || 0), 0) /
-          totalTrades
-        ).toFixed(2)
+      ? (trades.reduce((sum, t) => sum + parseFloat(t.rr || 0), 0) / totalTrades).toFixed(2)
       : "0.00";
   const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : "0.0";
 
-  // Per-strategy breakdown
+  // Strategy breakdown
   const strategyMap = {};
   trades.forEach((t) => {
-    if (!strategyMap[t.strategy]) {
-      strategyMap[t.strategy] = { total: 0, wins: 0, losses: 0, sumRR: 0 };
+    const strat = t.strategy || "Unspecified";
+    if (!strategyMap[strat]) {
+      strategyMap[strat] = { total: 0, wins: 0, losses: 0, sumRR: 0 };
     }
-    strategyMap[t.strategy].total += 1;
-    if (t.result === "Win") strategyMap[t.strategy].wins += 1;
-    if (t.result === "Loss") strategyMap[t.strategy].losses += 1;
-    strategyMap[t.strategy].sumRR += parseFloat(t.rr || 0);
+    strategyMap[strat].total += 1;
+    if (t.result === "Win") strategyMap[strat].wins += 1;
+    if (t.result === "Loss") strategyMap[strat].losses += 1;
+    strategyMap[strat].sumRR += parseFloat(t.rr || 0);
   });
   const strategyStats = Object.entries(strategyMap).map(([strategy, data]) => ({
     strategy,
     total: data.total,
     wins: data.wins,
     losses: data.losses,
-    winRate:
-      data.total > 0 ? ((data.wins / data.total) * 100).toFixed(1) : "0.0",
+    winRate: data.total > 0 ? ((data.wins / data.total) * 100).toFixed(1) : "0.0",
     avgRR: data.total > 0 ? (data.sumRR / data.total).toFixed(2) : "0.00",
   }));
 
-  // Build daily map for calendar
+  // Build daily map: use parseISO on closeDate
   const dailyMap = {};
   trades.forEach((t) => {
     if (!t.closeDate) return;
-    const dayKey = t.closeDate; // "yyyy-MM-dd"
-    if (!dailyMap[dayKey]) dailyMap[dayKey] = { wins: 0, losses: 0 };
-    if (t.result === "Win") dailyMap[dayKey].wins += 1;
-    if (t.result === "Loss") dailyMap[dayKey].losses += 1;
+    const iso = parseISO(t.closeDate);
+    const key = format(iso, "yyyy-MM-dd");
+    if (!dailyMap[key]) {
+      dailyMap[key] = { wins: 0, losses: 0 };
+    }
+    if (t.result === "Win") dailyMap[key].wins += 1;
+    if (t.result === "Loss") dailyMap[key].losses += 1;
   });
 
   const monthStart = startOfMonth(currentMonth);
