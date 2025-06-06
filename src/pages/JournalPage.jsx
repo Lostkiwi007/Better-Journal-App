@@ -324,87 +324,22 @@ export default function JournalPage() {
                 padding: 16,
                 borderRadius: 6,
                 display: "flex",
-                justifyContent: "space-between",
+                flexDirection: "column",
                 gap: 12,
               }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
-                <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
-                  {trade.strategy}
-                </div>
-                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                  {dateRange}
-                </div>
-                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      backgroundColor: dirColor,
-                      color: "white",
-                      borderRadius: "50%",
-                      width: 24,
-                      height: 24,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {direction}
+              {/* Header row: Pair + Edit/Delete */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
+                  <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
+                    {trade.strategy}
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
-                    {rrNum >= 0 ? "+" : "-"}
-                    {Math.abs(rrNum).toFixed(2)} R:R
+                  <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                    {dateRange}
                   </div>
                 </div>
-              </div>
-
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                {trade.notes && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#d1d5db",
-                      backgroundColor: "#111827",
-                      padding: 8,
-                      borderRadius: 4,
-                    }}
-                  >
-                    {trade.notes}
-                  </div>
-                )}
                 <div style={{ display: "flex", gap: 8 }}>
-                  {trade.setupUrl && (
-                    <img
-                      src={trade.setupUrl}
-                      alt="setup"
-                      onClick={() => setModalImage(trade.setupUrl)}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        objectFit: "cover",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                      }}
-                    />
-                  )}
-                  {trade.screenshot && (
-                    <img
-                      src={trade.screenshot}
-                      alt="trade"
-                      onClick={() => setModalImage(trade.screenshot)}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        objectFit: "cover",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                      }}
-                    />
-                  )}
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
                     onClick={() => handleEdit(trades.indexOf(trade))}
                     style={{
@@ -433,6 +368,79 @@ export default function JournalPage() {
                   >
                     Delete
                   </button>
+                </div>
+              </div>
+
+              {/* Body row: Direction + R:R and Notes/Thumbnails */}
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{
+                        backgroundColor: dirColor,
+                        color: "white",
+                        borderRadius: "50%",
+                        width: 24,
+                        height: 24,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        fontSize: 14,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {direction}
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: rrColor }}>
+                      {rrNum >= 0 ? "+" : "-"}
+                      {Math.abs(rrNum).toFixed(2)} R:R
+                    </div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {trade.notes && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#d1d5db",
+                        backgroundColor: "#111827",
+                        padding: 8,
+                        borderRadius: 4,
+                      }}
+                    >
+                      {trade.notes}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {trade.setupUrl && (
+                      <img
+                        src={trade.setupUrl}
+                        alt="setup"
+                        onClick={() => setModalImage(trade.setupUrl)}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    )}
+                    {trade.screenshot && (
+                      <img
+                        src={trade.screenshot}
+                        alt="trade"
+                        onClick={() => setModalImage(trade.screenshot)}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
