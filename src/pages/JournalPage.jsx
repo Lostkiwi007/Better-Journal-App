@@ -19,8 +19,8 @@ export default function JournalPage() {
     closeDate: "",
     closeTime: "",
     notes: "",
-    screenshot: "",
     setupUrl: "",
+    screenshot: "",
   });
   const navigate = useNavigate();
 
@@ -62,8 +62,8 @@ export default function JournalPage() {
       closeDate: "",
       closeTime: "",
       notes: "",
-      screenshot: "",
       setupUrl: "",
+      screenshot: "",
     });
   };
 
@@ -174,6 +174,12 @@ export default function JournalPage() {
           onChange={(e) => setNewTrade({ ...newTrade, setupUrl: e.target.value })}
           style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
         />
+        <input
+          placeholder="Trade Screenshot URL"
+          value={newTrade.screenshot}
+          onChange={(e) => setNewTrade({ ...newTrade, screenshot: e.target.value })}
+          style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
+        />
       </div>
 
       <button
@@ -220,12 +226,10 @@ export default function JournalPage() {
                 <span style={{ color: rrColor }}>{trade.rr}</span>
               </div>
               <div>
-                <strong>Open:</strong>{" "}
-                {trade.openDate} {trade.openTime}
+                <strong>Open:</strong> {trade.openDate} {trade.openTime}
               </div>
               <div>
-                <strong>Close:</strong>{" "}
-                {trade.closeDate} {trade.closeTime}
+                <strong>Close:</strong> {trade.closeDate} {trade.closeTime}
               </div>
               <div style={{ gridColumn: "span 2" }}>
                 <strong>Notes:</strong> {trade.notes}
@@ -239,6 +243,18 @@ export default function JournalPage() {
                     style={{ color: "#60a5fa", textDecoration: "underline" }}
                   >
                     View Setup
+                  </a>
+                </div>
+              )}
+              {trade.screenshot && (
+                <div>
+                  <a
+                    href={trade.screenshot}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#60a5fa", textDecoration: "underline" }}
+                  >
+                    View Screenshot
                   </a>
                 </div>
               )}
