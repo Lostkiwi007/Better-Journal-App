@@ -7,14 +7,13 @@ export default function PerformancePage() {
   const { trades } = useContext(TradesContext);
   const navigate = useNavigate();
 
-  // Compute overall P/L, average R:R, best trade, worst trade
   const computeStats = () => {
     if (trades.length === 0) {
       return {
         totalPL: 0,
         avgRR: 0,
         bestRR: 0,
-        worstRR: 0
+        worstRR: 0,
       };
     }
 
@@ -24,11 +23,11 @@ export default function PerformancePage() {
         const stop = parseFloat(t.stop);
         const close = parseFloat(t.close);
         if (isNaN(entry) || isNaN(stop) || isNaN(close)) return null;
-
         const risk = Math.abs(entry - stop);
         const reward = Math.abs(close - entry);
         if (risk === 0) return null;
-        return (reward / risk) * (close >= entry ? 1 : -1);
+        const rr = (reward / risk) * (close >= entry ? 1 : -1);
+        return rr;
       })
       .filter((v) => v !== null);
 
@@ -53,7 +52,6 @@ export default function PerformancePage() {
 
   const { totalPL, avgRR, bestRR, worstRR } = computeStats();
 
-  // Compute per-strategy stats
   const strategyStats = () => {
     const byStrategy = {};
     trades.forEach((t) => {
@@ -81,7 +79,7 @@ export default function PerformancePage() {
       trades: data.count,
       avgRR: data.count > 0 ? data.totalRR / data.count : 0,
       bestRR: data.best,
-      worstRR: data.worst
+      worstRR: data.worst,
     }));
   };
 
