@@ -161,20 +161,22 @@ export default function JournalPage() {
           onChange={(e) => setNewTrade({ ...newTrade, pair: e.target.value })}
           style={{ padding: 8, backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
         />
-        <select
-          value={newTrade.strategy}
-          onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
-          style={{ padding: 8, backgroundColor: "#1f2937", color: "white", border: "none", borderRadius: 4 }}
-        >
-          <option value="" disabled>
-            Select Strategy
-          </option>
-          <option value="ORB">ORB</option>
-          <option value="Power Trend">Power Trend</option>
-          <option value="Breakout">Breakout</option>
-          <option value="Phantom Flow">Phantom Flow</option>
-          <option value="Pip Snatcher">Pip Snatcher</option>
-        </select>
+        <div>
+          <input
+            list="strategies"
+            placeholder="Strategy"
+            value={newTrade.strategy}
+            onChange={(e) => setNewTrade({ ...newTrade, strategy: e.target.value })}
+            style={{ width: "100%", padding: 8, backgroundColor: "#1f2937", color: "white", border: "none", borderRadius: 4 }}
+          />
+          <datalist id="strategies">
+            <option value="ORB" />
+            <option value="Power Trend" />
+            <option value="Breakout" />
+            <option value="Phantom Flow" />
+            <option value="Pip Snatcher" />
+          </datalist>
+        </div>
         <input
           placeholder="Entry Price"
           value={newTrade.entry}
@@ -360,7 +362,15 @@ export default function JournalPage() {
 
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                 {trade.notes && (
-                  <div style={{ fontSize: 12, color: "#d1d5db", backgroundColor: "#111827", padding: 8, borderRadius: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#d1d5db",
+                      backgroundColor: "#111827",
+                      padding: 8,
+                      borderRadius: 4,
+                    }}
+                  >
                     {trade.notes}
                   </div>
                 )}
