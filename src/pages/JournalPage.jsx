@@ -24,6 +24,7 @@ export default function JournalPage() {
     screenshot: "",
   });
   const [editIndex, setEditIndex] = useState(null);
+  const [modalImage, setModalImage] = useState(null);
   const navigate = useNavigate();
 
   const determineResult = (entry, stop, target, close) => {
@@ -273,6 +274,30 @@ export default function JournalPage() {
         {editIndex !== null ? "Update Trade" : "Add Trade"}
       </button>
 
+      {modalImage && (
+        <div
+          onClick={() => setModalImage(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0,0,0,0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <img
+            src={modalImage}
+            alt="full"
+            style={{ maxWidth: "90%", maxHeight: "90%", borderRadius: 6 }}
+          />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {sortedTrades.map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
@@ -344,14 +369,28 @@ export default function JournalPage() {
                     <img
                       src={trade.setupUrl}
                       alt="setup"
-                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4 }}
+                      onClick={() => setModalImage(trade.setupUrl)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                      }}
                     />
                   )}
                   {trade.screenshot && (
                     <img
                       src={trade.screenshot}
                       alt="trade"
-                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4 }}
+                      onClick={() => setModalImage(trade.screenshot)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                      }}
                     />
                   )}
                 </div>
