@@ -251,13 +251,13 @@ export default function JournalPage() {
           onChange={(e) => setNewTrade({ ...newTrade, notes: e.target.value })}
           style={{
             padding: 8,
-            backgroundColor: "#1f2937",   // match card color
+            backgroundColor: "#1f2937",
             border: "none",
             borderRadius: 4,
             gridColumn: "span 2",
             resize: "vertical",
             minHeight: 60,
-            color: "white",               // match card text color
+            color: "#9ca3af",
           }}
         />
       </div>
@@ -365,7 +365,7 @@ export default function JournalPage() {
                   <div
                     style={{
                       fontSize: 12,
-                      color: "white",
+                      color: "#9ca3af",
                       backgroundColor: "#1f2937",
                       padding: 8,
                       borderRadius: 4,
