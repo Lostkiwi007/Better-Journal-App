@@ -320,6 +320,7 @@ export default function JournalPage() {
             <div
               key={idx}
               style={{
+                position: "relative",
                 backgroundColor: "#1f2937",
                 padding: 16,
                 borderRadius: 6,
@@ -328,6 +329,55 @@ export default function JournalPage() {
                 gap: 12,
               }}
             >
+              <div style={{ position: "absolute", top: 16, right: 16, textAlign: "right" }}>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  {trade.setupUrl && (
+                    <img
+                      src={trade.setupUrl}
+                      alt="setup"
+                      onClick={() => setModalImage(trade.setupUrl)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                      }}
+                    />
+                  )}
+                  {trade.screenshot && (
+                    <img
+                      src={trade.screenshot}
+                      alt="trade"
+                      onClick={() => setModalImage(trade.screenshot)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                      }}
+                    />
+                  )}
+                </div>
+                {trade.notes && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#d1d5db",
+                      backgroundColor: "#111827",
+                      padding: 8,
+                      borderRadius: 4,
+                      marginTop: 8,
+                      maxWidth: 200,
+                      textAlign: "right",
+                    }}
+                  >
+                    {trade.notes}
+                  </div>
+                )}
+              </div>
+
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>{trade.pair}</div>
                 <div style={{ fontSize: 14, color: "#9ca3af", marginTop: 4 }}>
@@ -357,57 +407,6 @@ export default function JournalPage() {
                     {rrNum >= 0 ? "+" : "-"}
                     {Math.abs(rrNum).toFixed(2)} R:R
                   </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ flex: 1 }}></div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {trade.setupUrl && (
-                      <img
-                        src={trade.setupUrl}
-                        alt="setup"
-                        onClick={() => setModalImage(trade.setupUrl)}
-                        style={{
-                          width: 60,
-                          height: 60,
-                          objectFit: "cover",
-                          borderRadius: 4,
-                          cursor: "pointer",
-                        }}
-                      />
-                    )}
-                    {trade.screenshot && (
-                      <img
-                        src={trade.screenshot}
-                        alt="trade"
-                        onClick={() => setModalImage(trade.screenshot)}
-                        style={{
-                          width: 60,
-                          height: 60,
-                          objectFit: "cover",
-                          borderRadius: 4,
-                          cursor: "pointer",
-                        }}
-                      />
-                    )}
-                  </div>
-                  {trade.notes && (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "#d1d5db",
-                        backgroundColor: "#111827",
-                        padding: 8,
-                        borderRadius: 4,
-                        maxWidth: "200px",
-                        textAlign: "right",
-                      }}
-                    >
-                      {trade.notes}
-                    </div>
-                  )}
                 </div>
               </div>
 
