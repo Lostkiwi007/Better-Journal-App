@@ -36,14 +36,17 @@ export default function PerformancePage() {
     if (t.result === "Loss") strategyMap[strat].losses += 1;
     strategyMap[strat].sumRR += parseFloat(t.rr || 0);
   });
-  const strategyStats = Object.entries(strategyMap).map(([strategy, data]) => ({
-    strategy,
-    total: data.total,
-    wins: data.wins,
-    losses: data.losses,
-    winRate: data.total > 0 ? ((data.wins / data.total) * 100).toFixed(1) : "0.0",
-    avgRR: data.total > 0 ? (data.sumRR / data.total).toFixed(2) : "0.00",
-  }));
+  const strategyStats = Object.entries(strategyMap).map(([strategy, data]) => {
+    const avg = data.total > 0 ? (data.sumRR / data.total).toFixed(2) : "0.00";
+    return {
+      strategy,
+      total: data.total,
+      wins: data.wins,
+      losses: data.losses,
+      winRate: data.total > 0 ? ((data.wins / data.total) * 100).toFixed(1) : "0.0",
+      avgRR: avg,
+    };
+  });
 
   // Build daily map for coloring
   const dailyMap = {};
@@ -87,23 +90,35 @@ export default function PerformancePage() {
         <p><strong>Losses:</strong> {losses}</p>
         <p><strong>Win Rate:</strong> {winRate}%</p>
         <p><strong>Average R:R:</strong> {avgRR}</p>
+      </div>
 
-        <h2 style={{ marginTop: 16 }}>By Strategy</h2>
-        {strategyStats.map((s) => (
-          <div
-            key={s.strategy}
-            style={{
-              backgroundColor: "#111827",
-              padding: 8,
-              marginBottom: 8,
-              borderRadius: 4,
-            }}
-          >
-            <p><strong>{s.strategy}</strong></p>
-            <p>Total: {s.total} | Wins: {s.wins} | Losses: {s.losses}</p>
-            <p>Win Rate: {s.winRate}% | Avg R:R: {s.avgRR}</p>
-          </div>
-        ))}
+      <h2 style={{ color: "#ec4899", marginBottom: 8 }}>By Strategy</h2>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+        {strategyStats.map((s) => {
+          const rrValue = parseFloat(s.avgRR);
+          const rrColor = rrValue >= 0 ? "#10b981" : "#ef4444";
+          return (
+            <div
+              key={s.strategy}
+              style={{
+                backgroundColor: "#111827",
+                padding: 12,
+                borderRadius: 4,
+                minWidth: 200,
+                flex: "1 0 200px",
+              }}
+            >
+              <p style={{ margin: 0, marginBottom: 4 }}><strong>{s.strategy}</strong></p>
+              <p style={{ margin: 0, fontSize: 14 }}>
+                Total: {s.total} | Wins: {s.wins} | Losses: {s.losses}
+              </p>
+              <p style={{ margin: 0, fontSize: 14 }}>
+                Win Rate: {s.winRate}% |{" "}
+                <span style={{ color: rrColor }}>Avg R:R: {s.avgRR}</span>
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       <h2 style={{ color: "#ec4899" }}>{monthTitle} Calendar</h2>
@@ -146,22 +161,25 @@ export default function PerformancePage() {
               <div style={{ position: "absolute", top: 4, left: 4, fontSize: 12 }}>
                 {format(day, "d")}
               </div>
-              <div style={{ marginTop: 20, fontSize: 12 }}>
-                {tradesOnDay.map((t, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 11,
-                      marginBottom: 2,
-                      color: t.result === "Win" ? "#10b981" : "#ef4444",
-                    }}
-                  >
-                    <span>{t.strategy}</span>
-                    <span>{t.rr}</span>
-                  </div>
-                ))}
+              <div style={{ marginTop: 20, fontSize: 11 }}>
+                {tradesOnDay.map((t, i) => {
+                  const rrNum = parseFloat(t.rr);
+                  const color = rrNum >= 0 ? "#10b981" : "#ef4444";
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 2,
+                        color,
+                      }}
+                    >
+                      <span>{t.strategy}</span>
+                      <span>{t.rr}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
