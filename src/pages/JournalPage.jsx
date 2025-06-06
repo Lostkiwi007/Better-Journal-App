@@ -271,9 +271,10 @@ export default function JournalPage() {
         {trades.map((trade, idx) => {
           const rrNum = parseFloat(trade.rr);
           const rrColor = rrNum >= 0 ? "#10b981" : "#ef4444";
-          const direction =
-            parseFloat(trade.close) > parseFloat(trade.entry) ? "L" : "S";
-          const dirColor = direction === "L" ? "#10b981" : "#ef4444";
+          // Determine long vs short by comparing target vs entry
+          const isLong = parseFloat(trade.target) > parseFloat(trade.entry);
+          const direction = isLong ? "L" : "S";
+          const dirColor = isLong ? "#10b981" : "#ef4444";
           const openFormatted =
             trade.openDate && format(parseISO(trade.openDate), "EEE, do MMM yyyy");
           const closeFormatted =
