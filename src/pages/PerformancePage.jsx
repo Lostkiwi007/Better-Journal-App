@@ -45,7 +45,7 @@ export default function PerformancePage() {
     avgRR: data.total > 0 ? (data.sumRR / data.total).toFixed(2) : "0.00",
   }));
 
-  // Build daily map: use parseISO on closeDate
+  // Build daily map for coloring
   const dailyMap = {};
   trades.forEach((t) => {
     if (!t.closeDate) return;
@@ -128,20 +128,41 @@ export default function PerformancePage() {
           if (stats.wins > stats.losses) bgColor = "#10b981";
           else if (stats.losses > stats.wins) bgColor = "#ef4444";
 
+          const tradesOnDay = trades.filter((t) => t.closeDate === key);
+
           return (
             <div
               key={key}
               style={{
-                height: 60,
+                minHeight: 80,
                 backgroundColor: bgColor,
                 borderRadius: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
                 color: "white",
+                padding: 4,
+                boxSizing: "border-box",
+                position: "relative",
               }}
             >
-              {format(day, "d")}
+              <div style={{ position: "absolute", top: 4, left: 4, fontSize: 12 }}>
+                {format(day, "d")}
+              </div>
+              <div style={{ marginTop: 20, fontSize: 12 }}>
+                {tradesOnDay.map((t, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 11,
+                      marginBottom: 2,
+                      color: t.result === "Win" ? "#10b981" : "#ef4444",
+                    }}
+                  >
+                    <span>{t.strategy}</span>
+                    <span>{t.rr}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
