@@ -1,95 +1,36 @@
-import React, { useContext } from "react";
-import { useNavigate } from "react-router-dom";
+// File: src/pages/PerformancePage.jsx
+import React, { useContext, useState } from "react";
+import { Link } from "react-router-dom";
 import { TradesContext } from "../context/TradesContext";
-import CalendarView from "./CalendarView";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from "date-fns";
 
 export default function PerformancePage() {
   const { trades } = useContext(TradesContext);
-  const navigate = useNavigate();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const computeStats = () => {
-    if (trades.length === 0) {
-      return {
-        totalPL: 0,
-        avgRR: 0,
-        bestRR: 0,
-        worstRR: 0,
-      };
+  // Build a map of date -> { wins, losses }
+  const dailyMap = {};
+  trades.forEach((t) => {
+    if (!t.closeDate) return;
+    const dayKey = t.closeDate; // format: "yyyy-MM-dd"
+    if (!dailyMap[dayKey]) {
+      dailyMap[dayKey] = { wins: 0, losses: 0 };
     }
+    if (t.result === "Win") dailyMap[dayKey].wins += 1;
+    else if (t.result === "Loss") dailyMap[dayKey].losses += 1;
+  });
 
-    const rrValues = trades
-      .map((t) => {
-        const entry = parseFloat(t.entry);
-        const stop = parseFloat(t.stop);
-        const close = parseFloat(t.close);
-        if (isNaN(entry) || isNaN(stop) || isNaN(close)) return null;
-        const risk = Math.abs(entry - stop);
-        const reward = Math.abs(close - entry);
-        if (risk === 0) return null;
-        const rr = (reward / risk) * (close >= entry ? 1 : -1);
-        return rr;
-      })
-      .filter((v) => v !== null);
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    const totalPL = trades.reduce((sum, t) => {
-      const entry = parseFloat(t.entry);
-      const close = parseFloat(t.close);
-      if (!isNaN(entry) && !isNaN(close)) {
-        return sum + (close - entry);
-      }
-      return sum;
-    }, 0);
-
-    const avgRR =
-      rrValues.length > 0
-        ? rrValues.reduce((a, b) => a + b, 0) / rrValues.length
-        : 0;
-    const bestRR = rrValues.length > 0 ? Math.max(...rrValues) : 0;
-    const worstRR = rrValues.length > 0 ? Math.min(...rrValues) : 0;
-
-    return { totalPL, avgRR, bestRR, worstRR };
-  };
-
-  const { totalPL, avgRR, bestRR, worstRR } = computeStats();
-
-  const strategyStats = () => {
-    const byStrategy = {};
-    trades.forEach((t) => {
-      const strat = t.strategy || "—";
-      const entry = parseFloat(t.entry);
-      const stop = parseFloat(t.stop);
-      const close = parseFloat(t.close);
-      if (isNaN(entry) || isNaN(stop) || isNaN(close)) return;
-
-      const risk = Math.abs(entry - stop);
-      const reward = Math.abs(close - entry);
-      const rr = risk === 0 ? 0 : (reward / risk) * (close >= entry ? 1 : -1);
-
-      if (!byStrategy[strat]) {
-        byStrategy[strat] = { count: 0, totalRR: 0, best: rr, worst: rr };
-      }
-      byStrategy[strat].count += 1;
-      byStrategy[strat].totalRR += rr;
-      if (rr > byStrategy[strat].best) byStrategy[strat].best = rr;
-      if (rr < byStrategy[strat].worst) byStrategy[strat].worst = rr;
-    });
-
-    return Object.entries(byStrategy).map(([strat, data]) => ({
-      strategy: strat,
-      trades: data.count,
-      avgRR: data.count > 0 ? data.totalRR / data.count : 0,
-      bestRR: data.best,
-      worstRR: data.worst,
-    }));
-  };
-
-  const perStrat = strategyStats();
+  const monthTitle = format(currentMonth, "MMMM yyyy");
 
   return (
     <div style={{ backgroundColor: "#0f172a", color: "white", minHeight: "100vh", padding: 24 }}>
-      <h1 style={{ color: "#34d399" }}>Performance Summary</h1>
-      <button
-        onClick={() => navigate("/")}
+      <h1 style={{ color: "#ec4899" }}>{monthTitle} Calendar</h1>
+      <Link
+        to="/"
         style={{
           display: "inline-block",
           marginBottom: 16,
@@ -101,53 +42,47 @@ export default function PerformancePage() {
         }}
       >
         Back to Journal
-      </button>
+      </Link>
 
-      <div style={{ marginTop: 16 }}>
-        <div style={{ marginBottom: 12 }}>
-          <strong>Total P/L:</strong> ${totalPL.toFixed(2)}
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <strong>Average R:R:</strong> {avgRR.toFixed(2)}
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <strong>Best R:R:</strong> {bestRR.toFixed(2)}
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <strong>Worst R:R:</strong> {worstRR.toFixed(2)}
-        </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 4,
+          marginTop: 16,
+        }}
+      >
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <div key={d} style={{ textAlign: "center", fontWeight: "bold" }}>
+            {d}
+          </div>
+        ))}
+
+        {daysInMonth.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const stats = dailyMap[key] || { wins: 0, losses: 0 };
+          let bgColor = "#374151"; // default gray
+          if (stats.wins > stats.losses) bgColor = "#10b981"; // green
+          else if (stats.losses > stats.wins) bgColor = "#ef4444"; // red
+
+          return (
+            <div
+              key={key}
+              style={{
+                height: 60,
+                backgroundColor: bgColor,
+                borderRadius: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+              }}
+            >
+              {format(day, "d")}
+            </div>
+          );
+        })}
       </div>
-
-      {perStrat.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <h2 style={{ color: "#ec4899" }}>By Strategy</h2>
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: 8, color: "#9ca3af" }}>Strategy</th>
-                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Trades</th>
-                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Avg R:R</th>
-                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Best R:R</th>
-                <th style={{ textAlign: "right", padding: 8, color: "#9ca3af" }}>Worst R:R</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perStrat.map(({ strategy, trades, avgRR, bestRR, worstRR }) => (
-                <tr key={strategy}>
-                  <td style={{ padding: 8 }}>{strategy}</td>
-                  <td style={{ padding: 8, textAlign: "right" }}>{trades}</td>
-                  <td style={{ padding: 8, textAlign: "right" }}>{avgRR.toFixed(2)}</td>
-                  <td style={{ padding: 8, textAlign: "right" }}>{bestRR.toFixed(2)}</td>
-                  <td style={{ padding: 8, textAlign: "right" }}>{worstRR.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <h2 style={{ color: "#ec4899", marginTop: 32 }}>Calendar Performance View</h2>
-      <CalendarView />
     </div>
   );
 }
